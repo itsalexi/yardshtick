@@ -15,6 +15,7 @@
     "convex": "1.42.3"
   },
   "devDependencies": {
+    "@types/node": "26.1.1",
     "@yard/eslint-config": "workspace:*",
     "@yard/typescript-config": "workspace:*",
     "convex-test": "0.0.54",

@@ -1,4 +1,7 @@
 {
   "extends": "@yard/typescript-config/base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
   "include": ["convex/**/*.ts"]
 }
