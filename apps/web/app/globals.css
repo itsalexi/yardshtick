@@ -621,8 +621,7 @@ input[type="text"]:focus {
     rgba(20, 20, 22, 0.35) 55%,
     oklch(0.63 0.1 45 / 0.12)
   );
-  backdrop-filter: blur(16px) saturate(1.35);
-  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  backdrop-filter: blur(4px) saturate(1.35);
 }
 
 .share-card {
@@ -635,7 +634,7 @@ input[type="text"]:focus {
   align-items: center;
   gap: 14px;
   text-align: center;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.82));
+  background: #fff;
   border: 1px solid rgba(255, 255, 255, 0.9);
   box-shadow:
     0 24px 60px rgba(20, 20, 22, 0.28),
