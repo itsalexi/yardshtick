@@ -61,7 +61,7 @@ test("opens crop and marketplace-image controls for a detected room item", async
   await page.getByRole("button", { name: /speaker-room/i }).click();
 
   const speaker = page.locator(".item-list").getByRole("button", {
-    name: /pa speaker with tripod/i,
+    name: /pa speaker/i,
   });
   await expect(speaker).toBeVisible();
   await speaker.click();

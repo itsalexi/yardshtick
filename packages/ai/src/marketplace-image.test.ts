@@ -33,6 +33,9 @@ describe("generateMarketplaceImage", () => {
       expect(String(prompt)).toContain("exact item");
       expect(String(prompt)).toContain("Preserve");
       expect(String(prompt)).toContain("Do not add props");
+      expect(String(prompt)).toContain("entire item fully inside the frame");
+      expect(String(prompt)).toContain("minor clipped or missing edges");
+      expect(String(prompt)).toContain("clear, natural viewing angle");
 
       const images = form.getAll("image[]");
       expect(images).toHaveLength(1);

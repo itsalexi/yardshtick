@@ -5,6 +5,10 @@ import {
   imageMetadataValidator,
   sampleSaleValidator,
 } from "./lib/validators";
+import {
+  DISCOVERY_PROMPT_VERSION,
+  DISCOVERY_PROVIDER_VERSION,
+} from "./lib/versions";
 
 export const createSale = mutation({
   args: {
@@ -31,8 +35,8 @@ export const createSale = mutation({
       status: "draft",
       processingStage: "uploaded",
       progress: 0,
-      promptVersion: "discovery-v1",
-      providerVersion: "gpt-5.6-sol+sam2-hiera-tiny",
+      promptVersion: DISCOVERY_PROMPT_VERSION,
+      providerVersion: DISCOVERY_PROVIDER_VERSION,
       createdAt: Date.now(),
     });
   },

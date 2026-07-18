@@ -12,10 +12,15 @@ export type MarketplaceImageInput = {
   signal?: AbortSignal;
 };
 
-const marketplaceImagePrompt = `Create a clean, centered marketplace product photo of the exact item in the
-input image on a seamless soft-white background with neutral studio lighting and a subtle contact shadow.
-Preserve its product type, color, proportions, visible branding and text, included accessories, and existing
-wear. Do not add props or accessories, repair damage, reveal hidden features, or otherwise change the product.`;
+const marketplaceImagePrompt = [
+  "Create a polished marketplace product photo of the exact item in the input image.",
+  "Show the entire item fully inside the frame with comfortable margin, balanced scale, and a clear, natural viewing angle.",
+  "Gently correct awkward perspective when helpful.",
+  "Use a seamless soft-white background, neutral studio lighting, and a subtle contact shadow.",
+  "Preserve the product type, materials, color, proportions, visible branding and text, included accessories, and existing wear.",
+  "If the crop or segmentation mask has minor clipped or missing edges, conservatively reconstruct only their obvious natural continuation so the silhouette looks complete.",
+  "Do not add props or accessories, invent major parts or unseen features, repair damage, or erase wear.",
+].join(" ");
 
 function fileNameFor(mimeType: MarketplaceImageInput["mimeType"]) {
   if (mimeType === "image/png") return "item.png";
