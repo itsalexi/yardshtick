@@ -2,21 +2,24 @@
 
 import type { SaleView, YardItem } from "@yard/contracts";
 import Link from "next/link";
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Logo } from "@/src/components/logo";
 import { QrCode } from "@/src/components/qr-code";
 import { SceneView } from "@/src/components/scene-view";
-import { conditionLabels, conditionOrder, php } from "@/src/lib/format";
+import { ItemReview } from "@/src/features/item-review/item-review";
+import {
+  createPhotoStates,
+  markPhotoReady,
+  moveReviewIndex,
+  normalizeReviewIndex,
+  replacePhoto,
+  retryPhoto,
+  type ItemPhotoStates,
+} from "@/src/features/item-review/model";
 import { getYardService } from "@/src/services/yard-service";
 
 type Phase = "scanning" | "detect" | "confirm" | "publish";
-
-const strategies = [
-  { key: "sellTodayPhp", name: "Sell today" },
-  { key: "fairPhp", name: "Fair price" },
-  { key: "tryYourLuckPhp", name: "Try your luck" },
-] as const;
 
 export default function ScanPage({ params }: { params: Promise<{ saleId: string }> }) {
   const { saleId } = use(params);
@@ -26,6 +29,8 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
   const [phase, setPhase] = useState<Phase>("scanning");
   const [visibleBoxes, setVisibleBoxes] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+  const [photoStates, setPhotoStates] = useState<ItemPhotoStates>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +59,10 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
     [sale],
   );
 
+  useEffect(() => {
+    setActiveReviewIndex((current) => normalizeReviewIndex(current, selectedItems.length));
+  }, [selectedItems.length]);
+
   async function toggleItem(item: YardItem) {
     if (!sale || phase !== "detect") return;
     await service.setItemSelected(item.id, !item.selected);
@@ -70,8 +79,38 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
 
   async function removeItem(itemId: string) {
     await service.setItemSelected(itemId, false);
-    setSale(await service.getSale(saleId));
+    const loaded = await service.getSale(saleId);
+    setSale(loaded);
+    if (loaded.items.every((item) => !item.selected)) setPhase("detect");
   }
+
+  function beginReview() {
+    setActiveReviewIndex(0);
+    setPhotoStates(createPhotoStates(selectedItems.map((item) => item.id)));
+    setPhase("confirm");
+  }
+
+  const finishPhotoGeneration = useCallback((itemId: string) => {
+    setPhotoStates((current) =>
+      current[itemId]
+        ? { ...current, [itemId]: markPhotoReady(current[itemId]) }
+        : current,
+    );
+  }, []);
+
+  const retryItemPhoto = useCallback((itemId: string) => {
+    setPhotoStates((current) =>
+      current[itemId] ? { ...current, [itemId]: retryPhoto(current[itemId]) } : current,
+    );
+  }, []);
+
+  const uploadItemPhoto = useCallback((itemId: string, previewUrl: string) => {
+    setPhotoStates((current) =>
+      current[itemId]
+        ? { ...current, [itemId]: replacePhoto(current[itemId], previewUrl) }
+        : current,
+    );
+  }, []);
 
   async function publish() {
     if (!sale) return;
@@ -138,7 +177,7 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
               type="button"
               className="btn"
               disabled={selectedItems.length === 0}
-              onClick={() => setPhase("confirm")}
+              onClick={beginReview}
             >
               Confirm {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"} →
             </button>
@@ -147,38 +186,29 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
       )}
 
       {phase === "confirm" && (
-        <>
-          <div className="topbar">
-            <button
-              type="button"
-              className="chip"
-              style={{ cursor: "pointer" }}
-              onClick={() => setPhase("detect")}
-            >
-              ← Scene
-            </button>
-            <span className="screen-title">Confirm & price</span>
-            <span className="chip pill-soft">{selectedItems.length}</span>
-          </div>
-
-          <div className="content">
-            {selectedItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                onPatch={(patch) => patchItem(item.id, patch)}
-                onRemove={() => removeItem(item.id)}
-              />
-            ))}
-          </div>
-
-          <div className="footer">
-            <button type="button" className="btn" disabled={!publishable} onClick={publish}>
-              Publish {selectedItems.length} item{selectedItems.length === 1 ? "" : "s"}
-              <span className="sub">Creates your shareable storefront</span>
-            </button>
-          </div>
-        </>
+        <ItemReview
+          items={selectedItems}
+          activeIndex={activeReviewIndex}
+          photoStates={photoStates}
+          publishable={publishable}
+          onPhotoReady={finishPhotoGeneration}
+          onRetryPhoto={retryItemPhoto}
+          onUploadPhoto={uploadItemPhoto}
+          onPatch={patchItem}
+          onRemove={removeItem}
+          onPrevious={() =>
+            setActiveReviewIndex((current) =>
+              moveReviewIndex(current, -1, selectedItems.length),
+            )
+          }
+          onNext={() =>
+            setActiveReviewIndex((current) =>
+              moveReviewIndex(current, 1, selectedItems.length),
+            )
+          }
+          onPublish={publish}
+          onBackToScene={() => setPhase("detect")}
+        />
       )}
 
       {phase === "publish" && (
@@ -236,106 +266,5 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
 
       {toast && <div className="toast">{toast}</div>}
     </main>
-  );
-}
-
-function ItemCard({
-  item,
-  onPatch,
-  onRemove,
-}: {
-  item: YardItem;
-  onPatch: (patch: Partial<Pick<YardItem, "title" | "condition" | "finalPricePhp">>) => void;
-  onRemove: () => void;
-}) {
-  const lowConfidence = item.maskSource === "bbox";
-  const activeStrategy = strategies.find(
-    ({ key }) => item.pricing && item.pricing[key] === item.finalPricePhp,
-  );
-
-  return (
-    <section className="card fadeup" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-        <div className="ph thumb" style={{ width: 56, height: 56, borderRadius: 12, flexShrink: 0 }}>
-          <span>{item.category.slice(0, 3).toUpperCase()}</span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-          <input
-            type="text"
-            value={item.title}
-            onChange={(event) => onPatch({ title: event.target.value })}
-            aria-label="Item title"
-          />
-          <span className="label">{item.category}</span>
-        </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Remove ${item.title}`}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--faint)",
-            fontSize: 18,
-            cursor: "pointer",
-            minWidth: 44,
-            minHeight: 44,
-          }}
-        >
-          ✕
-        </button>
-      </div>
-
-      {lowConfidence && (
-        <div className="banner-warn">Low match — double-check the model before publishing.</div>
-      )}
-
-      <div className="seg" role="radiogroup" aria-label="Condition">
-        {conditionOrder.map((condition) => (
-          <button
-            key={condition}
-            type="button"
-            data-on={item.condition === condition}
-            onClick={() => onPatch({ condition })}
-          >
-            {conditionLabels[condition]}
-          </button>
-        ))}
-      </div>
-
-      {item.pricing && (
-        <>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-            }}
-          >
-            <span className="muted" style={{ fontSize: 13 }}>
-              Comparable {php(item.pricing.sellTodayPhp)}–{php(item.pricing.tryYourLuckPhp)}
-            </span>
-            <span className="price" style={{ fontSize: 24 }}>
-              {php(item.finalPricePhp)}
-            </span>
-          </div>
-
-          <div className="strategies">
-            {strategies.map(({ key, name }) => (
-              <button
-                key={key}
-                type="button"
-                className="strategy"
-                data-sel={activeStrategy?.key === key}
-                onClick={() => onPatch({ finalPricePhp: item.pricing![key] })}
-              >
-                <span className="s-name">{name}</span>
-                <span className="s-price">{php(item.pricing![key])}</span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </section>
   );
 }
