@@ -1,80 +1,150 @@
 "use client";
 
+import type { SaleView } from "@yard/contracts";
+import { demoSale } from "@yard/mock-data";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
+import { Logo } from "@/src/components/logo";
+import { conditionLabels, php } from "@/src/lib/format";
 import { getYardService } from "@/src/services/yard-service";
 
-export default function CapturePage() {
-  const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
+const DEMO_BUYER = "Carlo D.";
+let reservationSimulated = false;
 
-  async function capture() {
-    if (busy) return;
-    setBusy(true);
-    const sale = await getYardService().createDraft({
-      file: new Blob(),
-      width: 2048,
-      height: 1536,
-    });
-    await getYardService().startScan(sale.id);
-    router.push(`/scan/${sale.id}`);
-  }
+export default function ListingsPage() {
+  const router = useRouter();
+  const service = getYardService();
+  const [sale, setSale] = useState<SaleView | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const loaded = await service.getSale(demoSale.id);
+      if (!cancelled) setSale(loaded);
+    };
+    refresh();
+    const interval = setInterval(refresh, 1500);
+
+    // Demo realtime: a reservation arrives ~2.2s after first opening listings.
+    const demoTimer = setTimeout(async () => {
+      if (reservationSimulated) return;
+      reservationSimulated = true;
+      const current = await service.getSale(demoSale.id);
+      const target = current.items.find(
+        (item) => item.selected && item.status === "available",
+      );
+      if (!target) return;
+      try {
+        await service.reserveItem(current.slug, target.id, DEMO_BUYER);
+        if (!cancelled) {
+          setToast(`${DEMO_BUYER} reserved ${target.title}`);
+          refresh();
+        }
+      } catch {
+        // Already reserved elsewhere — nothing to simulate.
+      }
+    }, 2200);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      clearTimeout(demoTimer);
+    };
+  }, [service]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const items = sale?.items.filter((item) => item.selected) ?? [];
+  const reserved = items.filter((item) => item.status === "reserved").length;
 
   return (
     <main className="screen">
-      <div className="topbar" style={{ background: "#141416", borderBottom: "none" }}>
-        <span className="wordmark" style={{ color: "#fff" }}>
-          Yard
+      <div className="topbar">
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Logo size={26} leaves="ink" />
+          <span className="wordmark">Yard</span>
         </span>
-        <span className="label" style={{ color: "rgba(255,255,255,.5)" }}>
-          Sell everything you see
-        </span>
+        {sale && (
+          <span className="chip pill-soft">
+            {items.length} listed{reserved > 0 ? ` · ${reserved} reserved` : ""}
+          </span>
+        )}
       </div>
 
-      <div className="viewfinder">
-        <span className="corner tl" />
-        <span className="corner tr" />
-        <span className="corner bl" />
-        <span className="corner br" />
+      <div className="content">
+        <span className="screen-title">My listings</span>
 
-        <p style={{ color: "rgba(255,255,255,.75)", textAlign: "center", maxWidth: 240 }}>
-          Point at a room, table, closet, or pile.
-        </p>
+        {!sale && <span className="muted">Loading…</span>}
 
-        <button
-          type="button"
-          className="shutter"
-          onClick={capture}
-          disabled={busy}
-          aria-label="Take photo"
-        />
+        {sale && items.length === 0 && (
+          <div
+            className="card"
+            style={{
+              padding: 28,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+              textAlign: "center",
+            }}
+          >
+            <Logo size={56} leaves="ink" />
+            <span className="screen-title" style={{ fontSize: 18 }}>
+              Nothing listed yet
+            </span>
+            <p className="muted" style={{ maxWidth: 240 }}>
+              Point your camera at a pile and Yard turns it into listings.
+            </p>
+            <button
+              type="button"
+              className="btn btn-small"
+              onClick={() => router.push("/capture")}
+            >
+              Scan your first pile
+            </button>
+          </div>
+        )}
 
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          style={{
-            background: "none",
-            border: "none",
-            color: "rgba(255,255,255,.6)",
-            fontSize: 13,
-            textDecoration: "underline",
-            cursor: "pointer",
-            minHeight: 44,
-          }}
-        >
-          or upload a photo
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          hidden
-          onChange={capture}
-        />
+        {items.map((item) => (
+          <div key={item.id} className="card item-row fadeup">
+            <div className="ph thumb">
+              <span>{item.category.slice(0, 3).toUpperCase()}</span>
+            </div>
+            <div className="grow">
+              <div className="title">{item.title}</div>
+              <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+                {conditionLabels[item.condition]} ·{" "}
+                <span className="price" style={{ fontSize: 13.5 }}>
+                  {php(item.finalPricePhp)}
+                </span>
+              </div>
+            </div>
+            {item.status === "reserved" ? (
+              <span className="chip pill-soft">
+                Reserved{item.reservedByName ? ` · ${item.reservedByName}` : ""}
+              </span>
+            ) : item.status === "sold" ? (
+              <span className="chip">Sold</span>
+            ) : (
+              <span className="chip">Available</span>
+            )}
+          </div>
+        ))}
+
+        {items.length > 0 && (
+          <p className="muted" style={{ textAlign: "center", fontSize: 13, padding: "4px 20px" }}>
+            Share your QR code so buyers can browse and reserve.
+          </p>
+        )}
       </div>
+
+      {toast && <div className="toast popin">{toast}</div>}
     </main>
   );
 }

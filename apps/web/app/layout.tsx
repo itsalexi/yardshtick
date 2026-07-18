@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 
+import { BottomNav } from "@/src/components/bottom-nav";
+
 const display = Space_Grotesk({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
@@ -31,7 +33,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en">
       <body className={`${display.variable} ${body.variable}`}>
-        <div className="shell">{children}</div>
+        <div className="shell">
+          {children}
+          <BottomNav />
+        </div>
       </body>
     </html>
   );

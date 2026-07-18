@@ -3,6 +3,7 @@
 import type { Storefront, YardItem } from "@yard/contracts";
 import { use, useEffect, useState } from "react";
 
+import { Logo } from "@/src/components/logo";
 import { conditionLabels, php } from "@/src/lib/format";
 import { getYardService } from "@/src/services/yard-service";
 
@@ -64,19 +65,16 @@ export default function StorefrontPage({ params }: { params: Promise<{ slug: str
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
             style={{
-              width: 38,
-              height: 38,
+              width: 40,
+              height: 40,
               borderRadius: "50%",
               background: "var(--accent-soft)",
-              color: "var(--accent-ink)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontFamily: "var(--font-display)",
-              fontWeight: 700,
             }}
           >
-            {storefront.title.slice(0, 1).toUpperCase()}
+            <Logo size={28} leaves="ink" />
           </div>
           <div>
             <div className="screen-title" style={{ fontSize: 18 }}>

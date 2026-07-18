@@ -4,6 +4,7 @@ import type { SaleView, YardItem } from "@yard/contracts";
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 
+import { Logo } from "@/src/components/logo";
 import { QrCode } from "@/src/components/qr-code";
 import { SceneView } from "@/src/components/scene-view";
 import { conditionLabels, conditionOrder, php } from "@/src/lib/format";
@@ -187,22 +188,8 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
             <span className="chip pill-soft">Published</span>
           </div>
           <div className="content" style={{ alignItems: "center", textAlign: "center" }}>
-            <div
-              className="popin"
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: "50%",
-                background: "var(--accent)",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 30,
-                marginTop: 18,
-              }}
-            >
-              ✓
+            <div className="popin" style={{ marginTop: 18 }}>
+              <Logo size={80} leaves="ink" />
             </div>
             <p className="muted" style={{ maxWidth: 260 }}>
               {selectedItems.length} items are up. Share the link or let buyers scan the code.
@@ -236,15 +223,10 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
 
             <QrCode seed={sale.slug} />
 
-            <div style={{ display: "flex", gap: 10, width: "100%", marginTop: 4 }}>
-              <Link href={`/s/${sale.slug}`} style={{ flex: 1, textDecoration: "none" }}>
-                <span className="btn btn-secondary" style={{ display: "flex" }}>
-                  Buyer view
-                </span>
-              </Link>
-              <Link href={`/manage/${sale.id}`} style={{ flex: 1, textDecoration: "none" }}>
+            <div style={{ width: "100%", marginTop: 4 }}>
+              <Link href="/" style={{ textDecoration: "none" }}>
                 <span className="btn" style={{ display: "flex" }}>
-                  Dashboard
+                  Go to my listings
                 </span>
               </Link>
             </div>
