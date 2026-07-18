@@ -17,6 +17,9 @@ export const beginRun = internalMutation({
   handler: async (ctx, { saleId }) => {
     const sale = await ctx.db.get("sales", saleId);
     if (!sale) throw new Error("Sale not found");
+    if (sale.status === "published") {
+      throw new Error("Published sales cannot be rescanned.");
+    }
     const now = Date.now();
 
     if (sale.activeRunId) {
@@ -143,6 +146,8 @@ export const persistCandidates = internalMutation({
         source: "ai",
         title: candidate.displayName,
         category: candidate.category,
+        condition: "good",
+        status: "available",
         confidence: candidate.sellabilityConfidence,
         roughBox: candidate.roughBox,
         maskSource: "pending",

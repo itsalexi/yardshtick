@@ -52,6 +52,10 @@ export const scanItemSchema = z.object({
   segmentationConfidence: z.number().min(0).max(1).nullable(),
   crop: cropStateSchema,
   marketplaceImage: marketplaceImageStateSchema,
+  condition: z.enum(["like_new", "good", "fair", "for_parts"]).default("good"),
+  finalPricePhp: z.number().positive().optional(),
+  status: z.enum(["available", "reserved", "sold"]).default("available"),
+  reservedByName: z.string().min(1).optional(),
 });
 
 export const scanRunSummarySchema = z.object({
@@ -69,7 +73,7 @@ export const scanRunSummarySchema = z.object({
 export const scanSellerViewSchema = z.object({
   id: z.string().min(1),
   slug: z.string().min(1),
-  status: z.enum(["draft", "processing", "ready", "failed"]),
+  status: z.enum(["draft", "processing", "ready", "published", "failed"]),
   processingStage: z.enum(["uploaded", "discovering", "segmenting", "complete", "failed"]),
   progress: z.number().min(0).max(100),
   activeRunId: z.string().nullable(),
@@ -97,7 +101,7 @@ export const sampleSaleSchema = z.object({
   id: z.string().min(1),
   fixtureKey: z.string().min(1),
   imageUrl: z.string().url(),
-  status: z.enum(["draft", "processing", "ready", "failed"]),
+  status: z.enum(["draft", "processing", "ready", "published", "failed"]),
 });
 
 export type ImageMimeType = z.infer<typeof imageMimeTypeSchema>;

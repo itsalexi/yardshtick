@@ -44,6 +44,8 @@ function sellerView(
         selected: true,
         title: "Apple smartphone",
         category: "electronics",
+        condition: "good",
+        status: "available",
         confidence: 0.98,
         roughBox: { x1: 100, y1: 200, x2: 300, y2: 500 },
         refinedBox: { x1: 105, y1: 205, x2: 295, y2: 495 },

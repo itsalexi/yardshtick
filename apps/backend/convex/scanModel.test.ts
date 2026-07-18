@@ -77,6 +77,24 @@ const completeRun = makeFunctionReference<
 >("scanModel:completeRun");
 
 describe("scan persistence", () => {
+  it("does not rescan a published sale", async () => {
+    const t = convexTest(schema, modules);
+    const storageId = await t.run(async (ctx) =>
+      ctx.storage.store(new Blob(["image"], { type: "image/jpeg" })),
+    );
+    const saleId = await t.mutation(createDraft, {
+      storageId,
+      metadata: { width: 2048, height: 1536, mimeType: "image/jpeg" },
+    });
+    await t.run((ctx) => ctx.db.patch("sales", saleId, { status: "published" }));
+
+    await expect(t.mutation(beginRun, { saleId })).rejects.toThrow(/published/i);
+    await expect(t.run((ctx) => ctx.db.get("sales", saleId))).resolves.toMatchObject({
+      status: "published",
+      processingStage: "uploaded",
+    });
+  });
+
   it("records the current discovery version when an older sale is rescanned", async () => {
     const t = convexTest(schema, modules);
     const storageId = await t.run(async (ctx) =>
@@ -159,6 +177,10 @@ describe("scan persistence", () => {
     expect(progressive?.items.map(({ maskSource }) => maskSource)).toEqual([
       "pending",
       "pending",
+    ]);
+    expect(progressive?.items).toEqual([
+      expect.objectContaining({ condition: "good", status: "available" }),
+      expect.objectContaining({ condition: "good", status: "available" }),
     ]);
 
     await expect(

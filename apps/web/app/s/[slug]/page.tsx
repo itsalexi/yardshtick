@@ -90,9 +90,13 @@ export default function StorefrontPage({ params }: { params: Promise<{ slug: str
       <div className="content">
         {storefront.items.map((item) => (
           <div key={item.id} className="card item-row fadeup">
-            <div className="ph thumb">
-              <span>{item.category.slice(0, 3).toUpperCase()}</span>
-            </div>
+            {item.imageUrl ? (
+              <img className="thumb listing-thumb" src={item.imageUrl} alt="" />
+            ) : (
+              <div className="ph thumb">
+                <span>{item.category.slice(0, 3).toUpperCase()}</span>
+              </div>
+            )}
             <div className="grow">
               <div className="title">{item.title}</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3 }}>

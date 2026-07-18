@@ -15,10 +15,12 @@
     "@yard/contracts": "workspace:*",
     "@yard/mock-data": "workspace:*",
     "clsx": "^2.1.1",
+    "convex": "1.42.3",
     "motion": "^12.42.2",
     "next": "16.2.10",
     "react": "19.2.7",
     "react-dom": "19.2.7",
+    "react-qr-code": "^2.2.0",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

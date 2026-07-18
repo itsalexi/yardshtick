@@ -14,6 +14,10 @@ export class MockYardService implements YardService {
     return structuredClone(this.sale);
   }
 
+  async getLatestSale(): Promise<SaleView> {
+    return structuredClone(this.sale);
+  }
+
   async setItemSelected(itemId: string, selected: boolean): Promise<void> {
     this.sale.items = this.sale.items.map((item) =>
       item.id === itemId ? { ...item, selected } : item,
@@ -28,6 +32,10 @@ export class MockYardService implements YardService {
       item.id === itemId ? { ...item, ...patch } : item,
     );
   }
+
+  async prepareItemPhoto(): Promise<void> {}
+
+  async retryItemPhoto(): Promise<void> {}
 
   async publishSale(): Promise<Storefront> {
     this.sale.status = "published";

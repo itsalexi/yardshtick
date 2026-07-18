@@ -13,7 +13,6 @@ function renderReview(overrides: Partial<ItemReviewProps> = {}) {
     activeIndex: 0,
     photoStates: createPhotoStates(items.map((item) => item.id)),
     publishable: true,
-    onPhotoReady: vi.fn(),
     onRetryPhoto: vi.fn(),
     onUploadPhoto: vi.fn(),
     onPatch: vi.fn(),
@@ -44,7 +43,6 @@ describe("ItemReview", () => {
     states[items[0].id] = markPhotoReady(states[items[0].id]);
     const html = renderReview({ items, photoStates: states });
 
-    expect(html).toContain("Retry photo");
     expect(html).toContain("Upload your own");
     expect(html).toContain(">Next<");
     expect(html).not.toContain(">Publish<");

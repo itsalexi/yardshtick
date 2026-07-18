@@ -10,11 +10,11 @@ import { SceneView } from "@/src/components/scene-view";
 import { ItemReview } from "@/src/features/item-review/item-review";
 import {
   createPhotoStates,
-  markPhotoReady,
   moveReviewIndex,
   normalizeReviewIndex,
   replacePhoto,
   retryPhoto,
+  syncPhotoStates,
   type ItemPhotoStates,
 } from "@/src/features/item-review/model";
 import { getYardService } from "@/src/services/yard-service";
@@ -31,22 +31,38 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
   const [toast, setToast] = useState<string | null>(null);
   const [activeReviewIndex, setActiveReviewIndex] = useState(0);
   const [photoStates, setPhotoStates] = useState<ItemPhotoStates>({});
+  const [shareOrigin, setShareOrigin] = useState("https://yard.sh");
+
+  useEffect(() => setShareOrigin(window.location.origin), []);
 
   useEffect(() => {
     let cancelled = false;
-    service.getSale(saleId).then((loaded) => {
-      if (cancelled) return;
-      setSale(loaded);
-      // Boxes pop in staggered during the ~1.9s scan treatment.
-      loaded.items.forEach((_, index) => {
-        setTimeout(() => setVisibleBoxes(index + 1), 500 + index * 220);
-      });
-      setTimeout(() => setPhase("detect"), 1900);
-    });
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const refresh = async () => {
+      try {
+        const loaded = await service.getSale(saleId);
+        if (cancelled) return;
+        setSale(loaded);
+        setVisibleBoxes(loaded.items.length);
+        if (loaded.status === "published") {
+          setPhase("publish");
+        } else if (loaded.processingStage === "complete") {
+          setPhase((current) => (current === "scanning" ? "detect" : current));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setToast(error instanceof Error ? error.message : "Could not load this sale.");
+        }
+      } finally {
+        if (!cancelled) timeout = setTimeout(refresh, 600);
+      }
+    };
+    void refresh();
     return () => {
       cancelled = true;
+      if (timeout) clearTimeout(timeout);
     };
-  }, [saleId]);
+  }, [saleId, service]);
 
   useEffect(() => {
     if (!toast) return;
@@ -63,46 +79,73 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
     setActiveReviewIndex((current) => normalizeReviewIndex(current, selectedItems.length));
   }, [selectedItems.length]);
 
+  useEffect(() => {
+    if (phase !== "confirm") return;
+    setPhotoStates((current) => syncPhotoStates(current, selectedItems));
+  }, [phase, selectedItems]);
+
   async function toggleItem(item: YardItem) {
     if (!sale || phase !== "detect") return;
+    setSale({
+      ...sale,
+      items: sale.items.map((candidate) =>
+        candidate.id === item.id ? { ...candidate, selected: !item.selected } : candidate,
+      ),
+    });
     await service.setItemSelected(item.id, !item.selected);
-    setSale(await service.getSale(saleId));
   }
 
   async function patchItem(
     itemId: string,
     patch: Partial<Pick<YardItem, "title" | "condition" | "finalPricePhp">>,
   ) {
+    setSale((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item) =>
+              item.id === itemId ? { ...item, ...patch } : item,
+            ),
+          }
+        : current,
+    );
     await service.updateItem(itemId, patch);
-    setSale(await service.getSale(saleId));
   }
 
   async function removeItem(itemId: string) {
     await service.setItemSelected(itemId, false);
-    const loaded = await service.getSale(saleId);
-    setSale(loaded);
-    if (loaded.items.every((item) => !item.selected)) setPhase("detect");
+    setSale((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item) =>
+              item.id === itemId ? { ...item, selected: false } : item,
+            ),
+          }
+        : current,
+    );
+    if (selectedItems.length <= 1) setPhase("detect");
   }
 
   function beginReview() {
     setActiveReviewIndex(0);
-    setPhotoStates(createPhotoStates(selectedItems.map((item) => item.id)));
+    setPhotoStates(createPhotoStates(selectedItems));
     setPhase("confirm");
+    for (const item of selectedItems) {
+      void service.prepareItemPhoto(saleId, item.id).catch((error: unknown) => {
+        setToast(error instanceof Error ? error.message : "Could not prepare item photo.");
+      });
+    }
   }
-
-  const finishPhotoGeneration = useCallback((itemId: string) => {
-    setPhotoStates((current) =>
-      current[itemId]
-        ? { ...current, [itemId]: markPhotoReady(current[itemId]) }
-        : current,
-    );
-  }, []);
 
   const retryItemPhoto = useCallback((itemId: string) => {
     setPhotoStates((current) =>
       current[itemId] ? { ...current, [itemId]: retryPhoto(current[itemId]) } : current,
     );
-  }, []);
+    void service.retryItemPhoto(itemId).catch((error: unknown) => {
+      setToast(error instanceof Error ? error.message : "Could not retry item photo.");
+    });
+  }, [service]);
 
   const uploadItemPhoto = useCallback((itemId: string, previewUrl: string) => {
     setPhotoStates((current) =>
@@ -129,7 +172,8 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
     );
   }
 
-  const link = `yard.sh/${sale.slug}`;
+  const link = `yard.sh/s/${sale.slug}`;
+  const shareUrl = `${shareOrigin}/s/${sale.slug}`;
   const publishable = selectedItems.every(
     (item) => item.title.trim().length > 0 && (item.finalPricePhp ?? 0) > 0,
   );
@@ -145,12 +189,13 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
           <div className="content">
             <SceneView
               items={sale.items}
+              image={sale.image}
               visibleCount={visibleBoxes}
               scanning
               caption="SCENE.JPG · analyzing"
             />
             <p className="muted" style={{ textAlign: "center" }}>
-              Finding sellable items in your scene…
+              {sale.error?.message ?? `Finding sellable items… ${Math.round(sale.progress)}%`}
             </p>
           </div>
         </>
@@ -165,6 +210,7 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
           <div className="content">
             <SceneView
               items={sale.items}
+              image={sale.image}
               caption={`SCENE.JPG · ${sale.items.length} items`}
               onTapItem={toggleItem}
             />
@@ -191,7 +237,6 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
           activeIndex={activeReviewIndex}
           photoStates={photoStates}
           publishable={publishable}
-          onPhotoReady={finishPhotoGeneration}
           onRetryPhoto={retryItemPhoto}
           onUploadPhoto={uploadItemPhoto}
           onPatch={patchItem}
@@ -243,7 +288,7 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
                 type="button"
                 className="btn btn-secondary btn-small"
                 onClick={() => {
-                  navigator.clipboard?.writeText(`https://${link}`);
+                  navigator.clipboard?.writeText(shareUrl);
                   setToast("Link copied");
                 }}
               >
@@ -251,7 +296,7 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
               </button>
             </div>
 
-            <QrCode seed={sale.slug} />
+            <QrCode seed={shareUrl} />
 
             <div style={{ width: "100%", marginTop: 4 }}>
               <Link href="/" style={{ textDecoration: "none" }}>

@@ -1,7 +1,6 @@
 "use client";
 
 import type { SaleView } from "@yard/contracts";
-import { demoSale } from "@yard/mock-data";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -9,56 +8,29 @@ import { Logo } from "@/src/components/logo";
 import { conditionLabels, php } from "@/src/lib/format";
 import { getYardService } from "@/src/services/yard-service";
 
-const DEMO_BUYER = "Carlo D.";
-let reservationSimulated = false;
-
 export default function ListingsPage() {
   const router = useRouter();
   const service = getYardService();
   const [sale, setSale] = useState<SaleView | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
-      const loaded = await service.getSale(demoSale.id);
-      if (!cancelled) setSale(loaded);
-    };
-    refresh();
-    const interval = setInterval(refresh, 1500);
-
-    // Demo realtime: a reservation arrives ~2.2s after first opening listings.
-    const demoTimer = setTimeout(async () => {
-      if (reservationSimulated) return;
-      reservationSimulated = true;
-      const current = await service.getSale(demoSale.id);
-      const target = current.items.find(
-        (item) => item.selected && item.status === "available",
-      );
-      if (!target) return;
-      try {
-        await service.reserveItem(current.slug, target.id, DEMO_BUYER);
-        if (!cancelled) {
-          setToast(`${DEMO_BUYER} reserved ${target.title}`);
-          refresh();
-        }
-      } catch {
-        // Already reserved elsewhere — nothing to simulate.
+      const latest = await service.getLatestSale();
+      if (!cancelled) {
+        setSale(latest);
+        setLoaded(true);
       }
-    }, 2200);
+    };
+    void refresh();
+    const interval = setInterval(refresh, 1500);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
-      clearTimeout(demoTimer);
     };
   }, [service]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 2400);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   const items = sale?.items.filter((item) => item.selected) ?? [];
   const reserved = items.filter((item) => item.status === "reserved").length;
@@ -80,9 +52,9 @@ export default function ListingsPage() {
       <div className="content">
         <span className="screen-title">My listings</span>
 
-        {!sale && <span className="muted">Loading…</span>}
+        {!loaded && <span className="muted">Loading…</span>}
 
-        {sale && items.length === 0 && (
+        {loaded && items.length === 0 && (
           <div
             className="card"
             style={{
@@ -113,9 +85,13 @@ export default function ListingsPage() {
 
         {items.map((item) => (
           <div key={item.id} className="card item-row fadeup">
-            <div className="ph thumb">
-              <span>{item.category.slice(0, 3).toUpperCase()}</span>
-            </div>
+            {item.imageUrl ? (
+              <img className="thumb listing-thumb" src={item.imageUrl} alt="" />
+            ) : (
+              <div className="ph thumb">
+                <span>{item.category.slice(0, 3).toUpperCase()}</span>
+              </div>
+            )}
             <div className="grow">
               <div className="title">{item.title}</div>
               <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
@@ -143,8 +119,6 @@ export default function ListingsPage() {
           </p>
         )}
       </div>
-
-      {toast && <div className="toast popin">{toast}</div>}
     </main>
   );
 }

@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 import {
   imageMetadataValidator,
   sellerViewValidator,
+  storefrontValidator,
 } from "./lib/validators";
 import {
   DISCOVERY_PROMPT_VERSION,
@@ -21,6 +22,7 @@ export const createDraft = mutation({
     const nonce = crypto.randomUUID();
     return ctx.db.insert("sales", {
       slug: `yard-${now.toString(36)}-${nonce.slice(0, 8)}`,
+      title: "Yard Sale",
       imageStorageId: storageId,
       imageMimeType: metadata.mimeType,
       imageWidth: metadata.width,
@@ -100,6 +102,14 @@ export const getSellerView = query({
           selected: item.selected,
           title: item.title,
           category: item.category,
+          condition: item.condition ?? "good",
+          ...(item.finalPricePhp === undefined
+            ? {}
+            : { finalPricePhp: item.finalPricePhp }),
+          status: item.status ?? "available",
+          ...(item.reservedByName === undefined
+            ? {}
+            : { reservedByName: item.reservedByName }),
           confidence: item.confidence,
           roughBox: item.roughBox,
           refinedBox: item.refinedBox ?? null,
@@ -171,6 +181,154 @@ export const getSellerView = query({
           }
         : null,
       items: mappedItems,
+    };
+  },
+});
+
+export const getLatest = query({
+  args: {},
+  returns: v.union(v.id("sales"), v.null()),
+  handler: async (ctx) => {
+    const sale = await ctx.db
+      .query("sales")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .first();
+    return sale?._id ?? null;
+  },
+});
+
+export const publish = mutation({
+  args: { saleId: v.id("sales") },
+  returns: v.string(),
+  handler: async (ctx, { saleId }) => {
+    const sale = await ctx.db.get("sales", saleId);
+    if (!sale) throw new Error("Sale not found.");
+    if (sale.status !== "ready" && sale.status !== "published") {
+      throw new Error("Only a ready sale can be published.");
+    }
+    if (sale.processingStage !== "complete") {
+      throw new Error("The current scan must finish before publishing.");
+    }
+
+    const selectedItems = await ctx.db
+      .query("items")
+      .withIndex("by_saleId_and_selected", (q) =>
+        q.eq("saleId", saleId).eq("selected", true),
+      )
+      .collect();
+    if (selectedItems.length === 0) {
+      throw new Error("Select at least one item before publishing.");
+    }
+
+    for (const item of selectedItems) {
+      if (item.title.trim().length === 0) {
+        throw new Error("Every selected item needs a title before publishing.");
+      }
+      if (
+        item.finalPricePhp === undefined ||
+        !Number.isFinite(item.finalPricePhp) ||
+        item.finalPricePhp <= 0
+      ) {
+        throw new Error("Every selected item needs a positive price before publishing.");
+      }
+      const cropIsCurrent =
+        item.maskRevision > 0 &&
+        item.maskSource !== "pending" &&
+        item.cropStatus === "ready" &&
+        item.cropStorageId !== undefined &&
+        item.cropRevision === item.maskRevision;
+      if (!cropIsCurrent) {
+        throw new Error("Every selected item needs a current crop before publishing.");
+      }
+    }
+
+    await ctx.db.patch("sales", saleId, {
+      status: "published",
+      title: sale.title?.trim() || "Yard Sale",
+    });
+    return sale.slug;
+  },
+});
+
+export const getStorefront = query({
+  args: { slug: v.string() },
+  returns: v.union(v.null(), storefrontValidator),
+  handler: async (ctx, { slug }) => {
+    const sale = await ctx.db
+      .query("sales")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .unique();
+    if (!sale || sale.status !== "published") return null;
+
+    const selectedItems = await ctx.db
+      .query("items")
+      .withIndex("by_saleId_and_selected", (q) =>
+        q.eq("saleId", sale._id).eq("selected", true),
+      )
+      .collect();
+    selectedItems.sort((left, right) => left.sortOrder - right.sortOrder);
+
+    const items = await Promise.all(
+      selectedItems.map(async (item) => {
+        if (
+          item.maskRevision <= 0 ||
+          item.maskSource === "pending" ||
+          item.finalPricePhp === undefined ||
+          item.finalPricePhp <= 0
+        ) {
+          throw new Error("Published listing data is incomplete.");
+        }
+        const cropIsCurrent =
+          item.cropStatus === "ready" &&
+          item.cropStorageId !== undefined &&
+          item.cropRevision === item.maskRevision;
+        if (!cropIsCurrent) {
+          throw new Error("Published listing crop is no longer current.");
+        }
+        const marketplaceImageIsCurrent =
+          item.marketplaceImageStatus === "ready" &&
+          item.marketplaceImageStorageId !== undefined &&
+          item.marketplaceImageRevision === item.cropRevision;
+        const marketplaceImageUrl = marketplaceImageIsCurrent
+          ? await ctx.storage.getUrl(item.marketplaceImageStorageId!)
+          : null;
+        const imageUrl =
+          marketplaceImageUrl ??
+          (await ctx.storage.getUrl(item.cropStorageId!));
+        if (!imageUrl) throw new Error("Published listing image is unavailable.");
+
+        const mask = await ctx.db
+          .query("itemMasks")
+          .withIndex("by_itemId_and_revision", (q) =>
+            q.eq("itemId", item._id).eq("revision", item.maskRevision),
+          )
+          .unique();
+        return {
+          id: item._id,
+          selected: true,
+          title: item.title,
+          category: item.category,
+          condition: item.condition ?? "good",
+          finalPricePhp: item.finalPricePhp,
+          status: item.status ?? "available",
+          ...(item.reservedByName === undefined
+            ? {}
+            : { reservedByName: item.reservedByName }),
+          roughBox: item.roughBox,
+          maskSource: item.maskSource,
+          polygons: (mask?.polygons ?? []).map((polygon) =>
+            polygon.map((point) => [point[0]!, point[1]!] as [number, number]),
+          ),
+          imageUrl,
+        };
+      }),
+    );
+
+    return {
+      slug: sale.slug,
+      title: sale.title?.trim() || "Yard Sale",
+      items,
     };
   },
 });

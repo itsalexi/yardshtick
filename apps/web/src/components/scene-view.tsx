@@ -1,14 +1,13 @@
 "use client";
 
-import type { YardItem } from "@yard/contracts";
-
-import { SCENE_HEIGHT, SCENE_WIDTH } from "@/src/lib/format";
+import type { SaleView, YardItem } from "@yard/contracts";
 
 type SceneViewProps = {
   items: YardItem[];
   visibleCount?: number;
   scanning?: boolean;
   caption?: string;
+  image?: SaleView["image"];
   onTapItem?: (item: YardItem) => void;
 };
 
@@ -16,19 +15,29 @@ function pct(value: number, total: number): string {
   return `${(value / total) * 100}%`;
 }
 
-export function SceneView({ items, visibleCount, scanning, caption, onTapItem }: SceneViewProps) {
+export function SceneView({
+  items,
+  visibleCount,
+  scanning,
+  caption,
+  image,
+  onTapItem,
+}: SceneViewProps) {
   const shown = visibleCount === undefined ? items : items.slice(0, visibleCount);
+  const width = image?.width ?? 2048;
+  const height = image?.height ?? 1536;
 
   return (
     <div
-      className="scene ph"
-      style={{ aspectRatio: `${SCENE_WIDTH} / ${SCENE_HEIGHT}`, width: "100%" }}
+      className={`scene${image ? "" : " ph"}`}
+      style={{ aspectRatio: `${width} / ${height}`, width: "100%" }}
     >
-      <span>{caption ?? "SCENE.JPG"}</span>
+      {image ? <img className="scene-image" src={image.url} alt="Sale scene" /> : null}
+      <span className="scene-caption">{caption ?? "SCENE.JPG"}</span>
 
       {scanning && <div className="scanline" />}
 
-      <svg viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`} aria-hidden="true">
+      <svg viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
         {shown.map(
           (item) =>
             item.selected &&
@@ -51,10 +60,10 @@ export function SceneView({ items, visibleCount, scanning, caption, onTapItem }:
           className="box popin"
           data-tag={item.selected}
           style={{
-            left: pct(item.roughBox.x1, SCENE_WIDTH),
-            top: pct(item.roughBox.y1, SCENE_HEIGHT),
-            width: pct(item.roughBox.x2 - item.roughBox.x1, SCENE_WIDTH),
-            height: pct(item.roughBox.y2 - item.roughBox.y1, SCENE_HEIGHT),
+            left: pct(item.roughBox.x1, width),
+            top: pct(item.roughBox.y1, height),
+            width: pct(item.roughBox.x2 - item.roughBox.x1, width),
+            height: pct(item.roughBox.y2 - item.roughBox.y1, height),
           }}
           onClick={() => onTapItem?.(item)}
           aria-pressed={item.selected}

@@ -37,7 +37,7 @@ type EvaluationExpectation = Pick<
 >;
 
 type EvaluationView = {
-  status: "draft" | "processing" | "ready" | "failed";
+  status: "draft" | "processing" | "ready" | "published" | "failed";
   error: { code: string } | null;
   run: {
     candidateCount: number;

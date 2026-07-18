@@ -2,7 +2,7 @@
 
 import type { YardItem } from "@yard/contracts";
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import { conditionLabels, conditionOrder } from "@/src/lib/format";
 
@@ -15,7 +15,6 @@ export type ItemReviewProps = {
   activeIndex: number;
   photoStates: ItemPhotoStates;
   publishable: boolean;
-  onPhotoReady: (itemId: string) => void;
   onRetryPhoto: (itemId: string) => void;
   onUploadPhoto: (itemId: string, previewUrl: string) => void;
   onPatch: (itemId: string, patch: ItemPatch) => void;
@@ -36,7 +35,6 @@ export function ItemReview({
   activeIndex,
   photoStates,
   publishable,
-  onPhotoReady,
   onRetryPhoto,
   onUploadPhoto,
   onPatch,
@@ -48,19 +46,8 @@ export function ItemReview({
 }: ItemReviewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const item = items[activeIndex];
-  const itemId = item?.id;
   const photoState = item ? photoStates[item.id] : undefined;
   const isLast = activeIndex === items.length - 1;
-
-  useEffect(() => {
-    if (!itemId || photoState?.status !== "generating") return;
-
-    const timer = window.setTimeout(
-      () => onPhotoReady(itemId),
-      1200 + activeIndex * 120,
-    );
-    return () => window.clearTimeout(timer);
-  }, [activeIndex, itemId, onPhotoReady, photoState?.revision, photoState?.status]);
 
   if (!item || !photoState) return null;
 
@@ -94,32 +81,38 @@ export function ItemReview({
             ) : (
               <Image
                 key={`${item.id}-${photoState.revision}-${photoState.previewUrl ?? "generated"}`}
-                src={photoState.previewUrl ?? generatedPhotoPath(item)}
+                src={photoState.previewUrl ?? item.imageUrl ?? generatedPhotoPath(item)}
                 alt={`${item.title} product photo`}
                 fill
                 priority
                 sizes="(max-width: 430px) 100vw, 430px"
                 className="generated-photo"
-                unoptimized={photoState.source === "upload"}
+                unoptimized={
+                  photoState.source === "upload" ||
+                  Boolean(photoState.previewUrl?.startsWith("http"))
+                }
               />
             )}
             <span className="generation-badge">
               {photoState.status === "generating"
                 ? "Creating studio photo…"
+                : photoState.status === "failed"
+                  ? "Real crop fallback"
                 : photoState.source === "upload"
                   ? "Your photo"
                   : "AI studio photo"}
             </span>
             <div className="photo-overlay-actions">
-              <button
-                type="button"
-                className="photo-pill"
-                aria-label="Retry photo"
-                onClick={() => onRetryPhoto(item.id)}
-                disabled={photoState.status === "generating"}
-              >
-                ↻ Retry
-              </button>
+              {photoState.status === "failed" ? (
+                <button
+                  type="button"
+                  className="photo-pill"
+                  aria-label="Retry photo"
+                  onClick={() => onRetryPhoto(item.id)}
+                >
+                  ↻ Retry
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="photo-pill"

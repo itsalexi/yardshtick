@@ -26,6 +26,7 @@ export const createSale = mutation({
 
     return ctx.db.insert("sales", {
       slug: fixtureKey,
+      title: "Yard Sale",
       fixtureKey,
       imageStorageId: storageId,
       imageMimeType: metadata.mimeType,

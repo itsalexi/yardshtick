@@ -2,18 +2,27 @@
 
 import { Camera01Icon, Home01Icon, QrCodeIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { demoSale } from "@yard/mock-data";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Logo } from "@/src/components/logo";
 import { QrCode } from "@/src/components/qr-code";
+import { getYardService } from "@/src/services/yard-service";
 
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [shareOpen, setShareOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [slug, setSlug] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("https://yard.sh");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+    void getYardService()
+      .getLatestSale()
+      .then((sale) => setSlug(sale?.status === "published" ? sale.slug : null));
+  }, [pathname]);
 
   useEffect(() => {
     if (!toast) return;
@@ -33,7 +42,7 @@ export function BottomNav() {
   // Scan flow owns the bottom edge; storefront is the buyer's view.
   if (pathname.startsWith("/scan") || pathname.startsWith("/s/")) return null;
 
-  const link = `yard.sh/${demoSale.slug}`;
+  const shareUrl = slug ? `${origin}/s/${slug}` : "";
 
   return (
     <>
@@ -66,6 +75,7 @@ export function BottomNav() {
           type="button"
           className="nav-item"
           data-on={shareOpen}
+          disabled={!slug}
           onClick={() => setShareOpen(true)}
         >
           <HugeiconsIcon icon={QrCodeIcon} strokeWidth={2} />
@@ -104,7 +114,7 @@ export function BottomNav() {
             </div>
 
             <div className="qr-frame">
-              <QrCode seed={demoSale.slug} />
+              <QrCode seed={shareUrl} />
             </div>
 
             <div
@@ -123,13 +133,13 @@ export function BottomNav() {
                 className="display"
                 style={{ fontWeight: 600, color: "var(--accent-ink)" }}
               >
-                {link}
+                {shareUrl.replace(/^https?:\/\//, "")}
               </span>
               <button
                 type="button"
                 className="btn btn-small"
                 onClick={() => {
-                  navigator.clipboard?.writeText(`https://${link}`);
+                  navigator.clipboard?.writeText(shareUrl);
                   setToast("Link copied");
                 }}
               >

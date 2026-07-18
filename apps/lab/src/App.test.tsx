@@ -45,6 +45,8 @@ const sale: ScanSellerView = {
       selected: true,
       title: "Smartphone",
       category: "Electronics",
+      condition: "good",
+      status: "available",
       confidence: 0.92,
       roughBox: { x1: 400, y1: 220, x2: 1420, y2: 1450 },
       refinedBox: null,

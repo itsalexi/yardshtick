@@ -10,17 +10,25 @@ export default function CapturePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function capture() {
-    if (busy) return;
+  async function capture(file: File | undefined) {
+    if (busy || !file) return;
     setBusy(true);
-    const sale = await getYardService().createDraft({
-      file: new Blob(),
-      width: 2048,
-      height: 1536,
-    });
-    await getYardService().startScan(sale.id);
-    router.push(`/scan/${sale.id}`);
+    setError(null);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const dimensions = { width: bitmap.width, height: bitmap.height };
+      bitmap.close();
+      const service = getYardService();
+      const sale = await service.createDraft({ file, ...dimensions });
+      router.push(`/scan/${sale.id}`);
+      void service.startScan(sale.id).catch(() => undefined);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not upload this photo.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -44,13 +52,13 @@ export default function CapturePage() {
         <span className="corner br" />
 
         <p style={{ color: "rgba(255,255,255,.75)", textAlign: "center", maxWidth: 240 }}>
-          Point at a room, table, closet, or pile.
+          {error ?? (busy ? "Uploading your scene…" : "Point at a room, table, closet, or pile.")}
         </p>
 
         <button
           type="button"
           className="shutter"
-          onClick={capture}
+          onClick={() => fileInputRef.current?.click()}
           disabled={busy}
           aria-label="Take photo"
         />
@@ -76,7 +84,10 @@ export default function CapturePage() {
           accept="image/*"
           capture="environment"
           hidden
-          onChange={capture}
+          onChange={(event) => {
+            void capture(event.target.files?.[0]);
+            event.target.value = "";
+          }}
         />
       </div>
     </main>

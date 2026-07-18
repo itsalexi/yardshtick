@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import { pixelBoxSchema, polygonSchema } from "./geometry";
+import {
+  cropStateSchema,
+  imageMimeTypeSchema,
+  marketplaceImageStateSchema,
+} from "./pipeline";
 
 export * from "./geometry";
 export * from "./pipeline";
@@ -33,12 +38,18 @@ export const yardItemSchema = z.object({
   selected: z.boolean(),
   title: z.string().min(1),
   category: z.string().min(1),
+  confidence: z.number().min(0).max(1).optional(),
   brand: z.string().nullable().optional(),
   model: z.string().nullable().optional(),
   condition: z.enum(["like_new", "good", "fair", "for_parts"]),
   roughBox: pixelBoxSchema,
-  maskSource: z.enum(["roboflow_sam2", "bbox", "manual_box"]),
+  refinedBox: pixelBoxSchema.nullable().optional(),
+  maskSource: z.enum(["pending", "roboflow_sam2", "bbox", "manual_box"]),
+  maskRevision: z.number().int().nonnegative().optional(),
   polygons: z.array(polygonSchema).optional(),
+  crop: cropStateSchema.optional(),
+  marketplaceImage: marketplaceImageStateSchema.optional(),
+  imageUrl: z.string().url().nullable().optional(),
   pricing: priceStrategySchema.optional(),
   finalPricePhp: z.number().positive().optional(),
   status: z.enum(["available", "reserved", "sold"]),
@@ -52,6 +63,18 @@ export const saleViewSchema = z.object({
   status: z.enum(["draft", "processing", "ready", "published", "failed"]),
   processingStage: processingStageSchema,
   progress: z.number().min(0).max(100),
+  image: z
+    .object({
+      url: z.string().url(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      mimeType: imageMimeTypeSchema,
+    })
+    .optional(),
+  error: z
+    .object({ code: z.string().min(1), message: z.string().min(1) })
+    .nullable()
+    .optional(),
   items: z.array(yardItemSchema),
 });
 
@@ -86,8 +109,11 @@ export interface YardService {
   createDraft(image: DraftImage): Promise<SaleView>;
   startScan(saleId: string): Promise<void>;
   getSale(saleId: string): Promise<SaleView>;
+  getLatestSale(): Promise<SaleView | null>;
   setItemSelected(itemId: string, selected: boolean): Promise<void>;
   updateItem(itemId: string, patch: Partial<Pick<YardItem, "title" | "condition" | "finalPricePhp">>): Promise<void>;
+  prepareItemPhoto(saleId: string, itemId: string): Promise<void>;
+  retryItemPhoto(itemId: string): Promise<void>;
   publishSale(saleId: string): Promise<Storefront>;
   getStorefront(slug: string): Promise<Storefront>;
   reserveItem(slug: string, itemId: string, buyerName: string): Promise<void>;

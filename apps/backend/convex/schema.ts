@@ -4,6 +4,8 @@ import { v } from "convex/values";
 import {
   cropStatusValidator,
   imageMimeTypeValidator,
+  listingConditionValidator,
+  listingStatusValidator,
   maskSourceValidator,
   marketplaceImageStatusValidator,
   marketplaceJobStatusValidator,
@@ -18,6 +20,7 @@ import {
 export default defineSchema({
   sales: defineTable({
     slug: v.string(),
+    title: v.optional(v.string()),
     fixtureKey: v.optional(v.string()),
     imageStorageId: v.id("_storage"),
     imageMimeType: imageMimeTypeValidator,
@@ -46,6 +49,10 @@ export default defineSchema({
     source: v.literal("ai"),
     title: v.string(),
     category: v.string(),
+    condition: v.optional(listingConditionValidator),
+    finalPricePhp: v.optional(v.number()),
+    status: v.optional(listingStatusValidator),
+    reservedByName: v.optional(v.string()),
     confidence: v.number(),
     roughBox: pixelBoxValidator,
     refinedBox: v.optional(pixelBoxValidator),

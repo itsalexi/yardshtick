@@ -27,7 +27,21 @@ export const saleStatusValidator = v.union(
   v.literal("draft"),
   v.literal("processing"),
   v.literal("ready"),
+  v.literal("published"),
   v.literal("failed"),
+);
+
+export const listingConditionValidator = v.union(
+  v.literal("like_new"),
+  v.literal("good"),
+  v.literal("fair"),
+  v.literal("for_parts"),
+);
+
+export const listingStatusValidator = v.union(
+  v.literal("available"),
+  v.literal("reserved"),
+  v.literal("sold"),
 );
 
 export const processingStageValidator = v.union(
@@ -120,6 +134,10 @@ export const sellerViewItemValidator = v.object({
   selected: v.boolean(),
   title: v.string(),
   category: v.string(),
+  condition: listingConditionValidator,
+  finalPricePhp: v.optional(v.number()),
+  status: listingStatusValidator,
+  reservedByName: v.optional(v.string()),
   confidence: v.number(),
   roughBox: pixelBoxValidator,
   refinedBox: v.union(pixelBoxValidator, v.null()),
@@ -141,6 +159,30 @@ export const sellerViewItemValidator = v.object({
     durationMs: v.union(v.number(), v.null()),
     error: v.union(safeErrorValidator, v.null()),
   }),
+});
+
+export const storefrontItemValidator = v.object({
+  id: v.string(),
+  selected: v.boolean(),
+  title: v.string(),
+  category: v.string(),
+  condition: listingConditionValidator,
+  finalPricePhp: v.number(),
+  status: listingStatusValidator,
+  reservedByName: v.optional(v.string()),
+  roughBox: pixelBoxValidator,
+  maskSource: v.union(
+    v.literal("roboflow_sam2"),
+    v.literal("bbox"),
+  ),
+  polygons: polygonsValidator,
+  imageUrl: v.string(),
+});
+
+export const storefrontValidator = v.object({
+  slug: v.string(),
+  title: v.string(),
+  items: v.array(storefrontItemValidator),
 });
 
 export const sellerViewValidator = v.object({
