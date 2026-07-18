@@ -284,49 +284,54 @@ button {
   color: #fff;
 }
 
-/* ---------- price strategies ---------- */
+/* ---------- asking price ---------- */
 
-.strategies {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.strategy {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
-  padding: 9px 6px 8px;
+.review-price-row {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  cursor: pointer;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.strategy .s-name {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--faint);
+.price-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 150px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
 }
 
-.strategy .s-price {
-  font-family: var(--font-display), sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--ink);
-}
-
-.strategy[data-sel="true"] {
+.price-input:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   border-color: transparent;
 }
 
-.strategy[data-sel="true"] .s-price {
+.price-currency {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 17px;
   color: var(--accent);
+}
+
+.price-input input[type="text"] {
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  text-align: right;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.price-input input[type="text"]:focus {
+  outline: none;
 }
 
 /* ---------- one-at-a-time item review ---------- */
@@ -344,10 +349,10 @@ button {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 14px 18px 18px;
+  padding: 12px 18px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .generated-photo-card,
@@ -359,11 +364,17 @@ button {
 
 .generated-photo-card {
   overflow: hidden;
+  /* Absorbs leftover viewport height so the screen never scrolls. */
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .generated-photo-stage {
   position: relative;
-  aspect-ratio: 5 / 4;
+  flex: 1;
+  min-height: 180px;
   overflow: hidden;
   background: oklch(0.945 0.018 225);
 }
@@ -460,24 +471,42 @@ button {
   height: 8px;
 }
 
-.photo-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 10px;
+.photo-overlay-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
 }
 
-.photo-actions .btn-small {
-  width: 100%;
-  padding: 0 10px;
-  font-size: 13px;
+.photo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(20, 20, 22, 0.76);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.photo-pill:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .review-fields {
-  padding: 14px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 11px;
 }
 
 .review-title-row {
@@ -513,35 +542,6 @@ button {
 .review-field-label {
   display: block;
   margin-bottom: 6px;
-}
-
-.review-pricing {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.review-price-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.review-price-heading > span:first-child {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.review-price-heading .muted {
-  font-size: 12px;
-}
-
-.review-price-heading .price {
-  flex-shrink: 0;
-  font-size: 25px;
 }
 
 .review-footer .review-previous {

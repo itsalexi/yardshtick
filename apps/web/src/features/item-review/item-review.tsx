@@ -4,15 +4,9 @@ import type { YardItem } from "@yard/contracts";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 
-import { conditionLabels, conditionOrder, php } from "@/src/lib/format";
+import { conditionLabels, conditionOrder } from "@/src/lib/format";
 
 import type { ItemPhotoStates } from "./model";
-
-const strategies = [
-  { key: "sellTodayPhp", name: "Sell today" },
-  { key: "fairPhp", name: "Fair price" },
-  { key: "tryYourLuckPhp", name: "Try your luck" },
-] as const;
 
 type ItemPatch = Partial<Pick<YardItem, "title" | "condition" | "finalPricePhp">>;
 
@@ -70,10 +64,6 @@ export function ItemReview({
 
   if (!item || !photoState) return null;
 
-  const activeStrategy = strategies.find(
-    ({ key }) => item.pricing && item.pricing[key] === item.finalPricePhp,
-  );
-
   function uploadSelectedPhoto(file: File | undefined) {
     if (!file) return;
     onUploadPhoto(item.id, URL.createObjectURL(file));
@@ -120,24 +110,25 @@ export function ItemReview({
                   ? "Your photo"
                   : "AI studio photo"}
             </span>
-          </div>
-
-          <div className="photo-actions">
-            <button
-              type="button"
-              className="btn btn-secondary btn-small"
-              onClick={() => onRetryPhoto(item.id)}
-              disabled={photoState.status === "generating"}
-            >
-              Retry photo
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-small"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Upload your own
-            </button>
+            <div className="photo-overlay-actions">
+              <button
+                type="button"
+                className="photo-pill"
+                aria-label="Retry photo"
+                onClick={() => onRetryPhoto(item.id)}
+                disabled={photoState.status === "generating"}
+              >
+                ↻ Retry
+              </button>
+              <button
+                type="button"
+                className="photo-pill"
+                aria-label="Upload your own"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                ↑ Upload
+              </button>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -191,35 +182,26 @@ export function ItemReview({
             </div>
           </div>
 
-          {item.pricing && (
-            <div className="review-pricing">
-              <div className="review-price-heading">
-                <span>
-                  <span className="label">Asking price</span>
-                  <span className="muted">
-                    Comparable {php(item.pricing.sellTodayPhp)}–
-                    {php(item.pricing.tryYourLuckPhp)}
-                  </span>
-                </span>
-                <span className="price">{php(item.finalPricePhp)}</span>
-              </div>
-
-              <div className="strategies">
-                {strategies.map(({ key, name }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className="strategy"
-                    data-sel={activeStrategy?.key === key}
-                    onClick={() => onPatch(item.id, { finalPricePhp: item.pricing![key] })}
-                  >
-                    <span className="s-name">{name}</span>
-                    <span className="s-price">{php(item.pricing![key])}</span>
-                  </button>
-                ))}
-              </div>
+          <div className="review-price-row">
+            <label className="label" htmlFor={`price-${item.id}`}>
+              Asking price
+            </label>
+            <div className="price-input">
+              <span className="price-currency">₱</span>
+              <input
+                id={`price-${item.id}`}
+                type="text"
+                inputMode="numeric"
+                value={item.finalPricePhp ?? ""}
+                onChange={(event) => {
+                  const digits = event.target.value.replace(/\D/g, "");
+                  onPatch(item.id, {
+                    finalPricePhp: digits ? Number(digits) : undefined,
+                  });
+                }}
+              />
             </div>
-          )}
+          </div>
         </section>
       </div>
 
