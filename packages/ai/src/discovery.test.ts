@@ -3,11 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import discoverySuccess from "../test/fixtures/providers/openai-discovery-success.json";
 import { discoverProducts } from "./discovery";
 
-function openAiResponse(
-  candidates: unknown[],
-  sceneType: "focal_merchandise" | "room_context" | "unclear" =
-    "focal_merchandise",
-) {
+function openAiResponse(candidates: unknown[]) {
   return {
     id: "resp_1",
     output: [
@@ -16,7 +12,7 @@ function openAiResponse(
         content: [
           {
             type: "output_text",
-            text: JSON.stringify({ sceneType, candidates }),
+            text: JSON.stringify({ candidates }),
           },
         ],
       },
@@ -41,16 +37,13 @@ describe("discoverProducts", () => {
       expect(request.text.format).toMatchObject({ type: "json_schema", strict: true });
       expect(request.input[0]?.role).toBe("developer");
       expect(request.input[0]?.content[0]?.text).toContain(
-        "Return zero candidates when there is no clear focal merchandise",
+        "Find every distinct visible physical object",
       );
       expect(request.input[0]?.content[0]?.text).toContain(
-        "main product body is clipped by the image edge",
+        "background objects are eligible",
       );
       expect(request.input[0]?.content[0]?.text).toContain(
-        "dominant foreground composition",
-      );
-      expect(request.input[0]?.content[0]?.text).toContain(
-        "Use image framing, relative scale, and centrality",
+        "Exclude people, body parts, architecture",
       );
 
       return new Response(JSON.stringify(discoverySuccess), { status: 200 });
@@ -96,22 +89,19 @@ describe("discoverProducts", () => {
     expect(result.candidates).toEqual([]);
   });
 
-  it("rejects incidental objects when the provider classifies a room context", async () => {
+  it("keeps identifiable furniture from a wider room scene", async () => {
     const fetcher = vi.fn(async () =>
       new Response(
         JSON.stringify(
-          openAiResponse(
-            [
-              {
-                tempId: "table",
-                displayName: "White Table",
-                category: "Furniture",
-                sellabilityConfidence: 0.99,
-                box: { xMin: 100, yMin: 100, xMax: 900, yMax: 900 },
-              },
-            ],
-            "room_context",
-          ),
+          openAiResponse([
+            {
+              tempId: "table",
+              displayName: "White Table",
+              category: "Furniture",
+              sellabilityConfidence: 0.99,
+              box: { xMin: 100, yMin: 100, xMax: 900, yMax: 900 },
+            },
+          ]),
         ),
         { status: 200 },
       ),
@@ -126,7 +116,8 @@ describe("discoverProducts", () => {
       fetcher,
     });
 
-    expect(result.candidates).toEqual([]);
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]?.displayName).toBe("White Table");
   });
 
   it("normalizes rate limits without reading the provider body into the error", async () => {

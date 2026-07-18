@@ -22,23 +22,28 @@ export const sceneManifest = [
     fileName: "phone-single.jpeg",
     width: 2048,
     height: 1536,
-    expectedCandidateRange: [1, 1],
+    expectedCandidateRange: [1, 2],
     required: [
       {
         label: "smartphone",
         aliases: ["phone", "iphone", "smartphone"],
       },
     ],
-    optional: [],
-    excluded: ["table", "hand", "laptop"],
-    notes: ["Ignore partial laptops at the frame edges."],
+    optional: [
+      {
+        label: "partial laptop",
+        aliases: ["laptop", "computer"],
+      },
+    ],
+    excluded: ["table", "hand"],
+    notes: ["A heavily clipped laptop may be omitted when it cannot support a listing."],
   },
   {
     fixtureKey: "laptop-table-multi",
     fileName: "laptop-table-multi.jpeg",
     width: 2048,
     height: 1536,
-    expectedCandidateRange: [4, 8],
+    expectedCandidateRange: [6, 12],
     required: [
       {
         label: "central laptop",
@@ -62,6 +67,18 @@ export const sceneManifest = [
         label: "secondary laptop",
         aliases: ["laptop", "computer"],
       },
+      {
+        label: "bottle",
+        aliases: ["bottle", "water bottle", "tumbler"],
+      },
+      {
+        label: "cap",
+        aliases: ["cap", "hat", "baseball cap"],
+      },
+      {
+        label: "pouch or case",
+        aliases: ["pouch", "case", "container"],
+      },
     ],
     excluded: ["table", "person", "hand", "chair"],
     notes: ["Distinct visible tabletop products may be returned separately."],
@@ -71,15 +88,20 @@ export const sceneManifest = [
     fileName: "charger-cable.jpeg",
     width: 2048,
     height: 1536,
-    expectedCandidateRange: [1, 1],
+    expectedCandidateRange: [1, 2],
     required: [
       {
         label: "charger bundle",
         aliases: ["charger", "power adapter and cable", "adapter cable"],
       },
     ],
-    optional: [],
-    excluded: ["table", "arm", "wallet", "laptop"],
+    optional: [
+      {
+        label: "wallet",
+        aliases: ["wallet", "pouch", "case"],
+      },
+    ],
+    excluded: ["table", "arm", "laptop"],
     notes: ["Treat the attached adapter and cable as one product bundle."],
   },
   {
@@ -87,7 +109,7 @@ export const sceneManifest = [
     fileName: "overlapping-caps.jpeg",
     width: 2048,
     height: 1536,
-    expectedCandidateRange: [2, 2],
+    expectedCandidateRange: [4, 7],
     required: [
       {
         label: "blue cap",
@@ -98,35 +120,74 @@ export const sceneManifest = [
         aliases: ["black cap", "alphatauri cap", "baseball cap"],
       },
     ],
-    optional: [],
-    excluded: ["table", "person", "phone", "laptop", "bottle"],
-    notes: ["The caps overlap but must remain separate candidates."],
+    optional: [
+      {
+        label: "smartphone",
+        aliases: ["phone", "iphone", "smartphone"],
+      },
+      {
+        label: "laptop",
+        aliases: ["laptop", "computer"],
+      },
+      {
+        label: "bottle",
+        aliases: ["bottle", "water bottle", "tumbler"],
+      },
+    ],
+    excluded: ["table", "person", "hand"],
+    notes: ["The caps overlap but remain separate; other identifiable products also count."],
   },
   {
     fixtureKey: "empty-table-room",
     fileName: "empty-table-room.jpeg",
     width: 2048,
     height: 1536,
-    expectedCandidateRange: [0, 0],
-    required: [],
+    expectedCandidateRange: [6, 12],
+    required: [
+      {
+        label: "table",
+        aliases: ["table", "desk"],
+      },
+      {
+        label: "chair",
+        aliases: ["chair", "seat"],
+      },
+    ],
     optional: [],
-    excluded: ["table", "chair", "floor", "room"],
-    notes: ["Negative control: staging furniture is not merchandise."],
+    excluded: ["floor", "wall", "room"],
+    notes: ["Furniture is valid garage-sale inventory even in a wider room scene."],
   },
   {
     fixtureKey: "pa-speaker-room",
     fileName: "pa-speaker-room.jpeg",
     width: 2048,
     height: 1536,
-    expectedCandidateRange: [1, 1],
+    expectedCandidateRange: [4, 12],
     required: [
       {
         label: "PA speaker bundle",
         aliases: ["pa speaker", "speaker and stand", "jbl speaker"],
       },
+      {
+        label: "whiteboard",
+        aliases: ["whiteboard", "dry erase board", "marker board"],
+      },
+      {
+        label: "chair",
+        aliases: ["chair", "seat"],
+      },
     ],
-    optional: [],
-    excluded: ["whiteboard", "table", "chair", "window", "cable"],
-    notes: ["Treat the speaker and tripod stand as one product."],
+    optional: [
+      {
+        label: "table",
+        aliases: ["table", "desk"],
+      },
+      {
+        label: "cable bundle",
+        aliases: ["cable", "cord", "wire bundle"],
+      },
+    ],
+    excluded: ["window", "wall", "floor"],
+    notes: ["Treat the speaker and tripod stand as one product; include other removable items."],
   },
 ] as const satisfies readonly SceneExpectation[];

@@ -32,4 +32,15 @@ describe("sceneManifest", () => {
       expect(included.filter((label) => excluded.has(label))).toEqual([]);
     }
   });
+
+  it("treats visible room furniture as garage-sale inventory", () => {
+    const room = sceneManifest.find(
+      ({ fixtureKey }) => fixtureKey === "empty-table-room",
+    );
+
+    expect(room?.expectedCandidateRange[0]).toBeGreaterThan(0);
+    expect(room?.required.map(({ label }) => label)).toEqual(
+      expect.arrayContaining(["table", "chair"]),
+    );
+  });
 });

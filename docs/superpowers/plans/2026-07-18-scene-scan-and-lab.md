@@ -10,6 +10,10 @@
 
 ## Global Constraints
 
+> **Product-intent update (2026-07-18):** Discovery now optimizes for whole-scene recall. Every visible,
+> identifiable physical item can be inventory, including furniture and background objects. The checked-in
+> manifest is authoritative and supersedes the original focal-item examples embedded below.
+
 - Keep `apps/web` on its existing mock `YardService`; this plan does not connect the product frontend.
 - Store `OPENAI_API_KEY` and `ROBOFLOW_API_KEY` only in Convex environment variables; never commit or expose them to the lab.
 - Use `gpt-5.6-sol`, low reasoning effort, strict Structured Outputs, normalized 0–1000 boxes, and at most 12 candidates.
@@ -732,7 +736,7 @@ Expected: all six sales reach a terminal state and a safe report is written. Pro
 
 Run: `pnpm --filter @yard/lab dev`
 
-Expected: the fixture picker shows all six scenes; at least one multi-object scan visibly progresses from boxes to polygons; the empty room completes with no accepted products; failed predictions remain usable as boxes.
+Expected: the fixture picker shows all six scenes; multi-object scans visibly progress from boxes to polygons; the room scene returns visible furniture; failed predictions remain usable as boxes.
 
 - [ ] **Step 5: Commit the evaluator and final slice fixes**
 
