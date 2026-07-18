@@ -10,6 +10,7 @@ Optimize for a reliable demo, not production completeness. Do not add accounts, 
 
 - `apps/web`: Next.js frontend. It must remain usable against the mock service until final integration.
 - `apps/backend`: Convex schema, queries, mutations, actions, storage, and orchestration.
+- `apps/lab`: Disposable Vite UI for exercising the live backend before product-frontend integration.
 - `packages/contracts`: Stable Zod schemas and inferred TypeScript types shared across teams.
 - `packages/ai`: Framework-independent AI provider, geometry, validation, and pricing logic.
 - `packages/mock-data`: Demo fixtures that validate against `@yard/contracts`.
@@ -19,6 +20,7 @@ Optimize for a reliable demo, not production completeness. Do not add accounts, 
 
 - `apps/web` may import `@yard/contracts` and `@yard/mock-data`.
 - `apps/backend` may import `@yard/contracts` and `@yard/ai`.
+- `apps/lab` may import `@yard/contracts` and Convex client libraries. It uses named function references and must not import backend-generated files or `@yard/ai`.
 - `@yard/ai` and `@yard/mock-data` may import `@yard/contracts`.
 - Never import backend or AI implementation code into `apps/web`.
 - Never import app code, Convex-generated types, browser APIs, or provider SDKs into `@yard/contracts`.
@@ -54,6 +56,7 @@ Use filters for team-specific work:
 ```sh
 pnpm --filter @yard/web dev
 pnpm --filter @yard/backend dev
+pnpm --filter @yard/lab dev
 pnpm --filter @yard/contracts test
 pnpm --filter @yard/ai test
 ```
@@ -67,6 +70,7 @@ Before handing work off, run the narrowest relevant tests followed by `pnpm lint
 - Preserve the box-only fallback throughout the AI pipeline.
 - Keep coordinate transformations explicit and tested.
 - Store provider keys in Convex environment variables. Never expose or commit OpenAI or Roboflow keys.
+- Keep `apps/lab` free of provider credentials; it calls only public Convex functions.
 - Do not hand-edit `apps/backend/convex/_generated`.
 - Preserve unrelated work in the repository and avoid destructive Git commands.
 - Add dependencies to the workspace that directly uses them rather than to the root.

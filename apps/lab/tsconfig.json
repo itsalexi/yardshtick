@@ -1,0 +1,14 @@
+{
+  "extends": "@yard/typescript-config/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["node", "vite/client"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "e2e/**/*.ts",
+    "playwright.config.ts",
+    "vite.config.ts"
+  ]
+}

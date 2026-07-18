@@ -3,6 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["VITE_CONVEX_URL"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {
