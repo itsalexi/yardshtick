@@ -20,6 +20,22 @@ export const safeErrorSchema = z.object({
     }),
 });
 
+export const cropStateSchema = z.object({
+  status: z.enum(["missing", "uploading", "ready", "failed"]),
+  revision: z.number().int().nonnegative().nullable(),
+  url: z.string().url().nullable(),
+  mimeType: imageMimeTypeSchema.nullable(),
+});
+
+export const marketplaceImageStateSchema = z.object({
+  status: z.enum(["idle", "pending", "generating", "ready", "failed"]),
+  revision: z.number().int().nonnegative().nullable(),
+  url: z.string().url().nullable(),
+  mimeType: imageMimeTypeSchema.nullable(),
+  durationMs: z.number().nonnegative().nullable(),
+  error: safeErrorSchema.nullable(),
+});
+
 export const scanItemSchema = z.object({
   id: z.string().min(1),
   tempId: z.string().min(1),
@@ -34,6 +50,8 @@ export const scanItemSchema = z.object({
   maskRevision: z.number().int().nonnegative(),
   polygons: z.array(polygonSchema),
   segmentationConfidence: z.number().min(0).max(1).nullable(),
+  crop: cropStateSchema,
+  marketplaceImage: marketplaceImageStateSchema,
 });
 
 export const scanRunSummarySchema = z.object({
@@ -68,6 +86,13 @@ export const createDraftInputSchema = z.object({
   metadata: imageMetadataSchema,
 });
 
+export const attachCropInputSchema = z.object({
+  itemId: z.string().min(1),
+  storageId: z.string().min(1),
+  mimeType: imageMimeTypeSchema,
+  maskRevision: z.number().int().nonnegative(),
+});
+
 export const sampleSaleSchema = z.object({
   id: z.string().min(1),
   fixtureKey: z.string().min(1),
@@ -75,10 +100,14 @@ export const sampleSaleSchema = z.object({
   status: z.enum(["draft", "processing", "ready", "failed"]),
 });
 
+export type ImageMimeType = z.infer<typeof imageMimeTypeSchema>;
 export type ImageMetadata = z.infer<typeof imageMetadataSchema>;
 export type SafeError = z.infer<typeof safeErrorSchema>;
+export type CropState = z.infer<typeof cropStateSchema>;
+export type MarketplaceImageState = z.infer<typeof marketplaceImageStateSchema>;
 export type ScanItem = z.infer<typeof scanItemSchema>;
 export type ScanRunSummary = z.infer<typeof scanRunSummarySchema>;
 export type ScanSellerView = z.infer<typeof scanSellerViewSchema>;
 export type CreateDraftInput = z.infer<typeof createDraftInputSchema>;
+export type AttachCropInput = z.infer<typeof attachCropInputSchema>;
 export type SampleSale = z.infer<typeof sampleSaleSchema>;

@@ -314,7 +314,7 @@ The prompt requests:
 
 ### Scheduling and fallback
 
-Each item has an independent generation job. A dispatcher schedules at most two pending item actions at once. When an item finishes, it invokes the dispatcher to fill the available slot. The scan action never waits for marketplace images.
+Each item has an independent generation job. A dispatcher schedules at most two pending item actions at once. The item records the current job ID, crop ID, and mask revision so an older attempt cannot overwrite a newer one. Every claimed job also schedules a timeout watchdog; stranded jobs fail safely and release their queue slot. When an item finishes, it invokes the dispatcher to fill the available slot. The scan action never waits for marketplace images.
 
 Generated images are non-blocking because image generation can take substantially longer than the one-minute Yard demo target. The real crop is displayed until generation succeeds. Failed, moderated, timed-out, or rate-limited edits retain the real crop without blocking the item.
 
