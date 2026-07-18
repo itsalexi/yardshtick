@@ -100,11 +100,30 @@ export const persistCandidates = internalMutation({
       .withIndex("by_saleId", (q) => q.eq("saleId", saleId))
       .collect();
     for (const item of previousItems) {
+      const imageJobs = await ctx.db
+        .query("marketplaceImageJobs")
+        .withIndex("by_itemId", (q) => q.eq("itemId", item._id))
+        .collect();
+      for (const job of imageJobs) {
+        if (job.status === "pending") {
+          await ctx.db.patch("marketplaceImageJobs", job._id, {
+            status: "stale",
+            completedAt: Date.now(),
+          });
+        }
+      }
       const masks = await ctx.db
         .query("itemMasks")
         .withIndex("by_itemId", (q) => q.eq("itemId", item._id))
         .collect();
       for (const mask of masks) await ctx.db.delete("itemMasks", mask._id);
+      if (item.cropStorageId) await ctx.storage.delete(item.cropStorageId);
+      if (
+        item.marketplaceImageStorageId &&
+        item.marketplaceImageStorageId !== item.cropStorageId
+      ) {
+        await ctx.storage.delete(item.marketplaceImageStorageId);
+      }
       await ctx.db.delete("items", item._id);
     }
 
@@ -181,6 +200,28 @@ export const persistSegmentation = internalMutation({
       polygonCount += result.polygons.length;
       if (result.maskSource === "bbox") fallbackCount += 1;
 
+      if (item.marketplaceImageJobId) {
+        const jobs = await ctx.db
+          .query("marketplaceImageJobs")
+          .withIndex("by_itemId", (q) => q.eq("itemId", item._id))
+          .collect();
+        for (const job of jobs) {
+          if (job.status === "pending") {
+            await ctx.db.patch("marketplaceImageJobs", job._id, {
+              status: "stale",
+              completedAt: now,
+            });
+          }
+        }
+      }
+      if (item.cropStorageId) await ctx.storage.delete(item.cropStorageId);
+      if (
+        item.marketplaceImageStorageId &&
+        item.marketplaceImageStorageId !== item.cropStorageId
+      ) {
+        await ctx.storage.delete(item.marketplaceImageStorageId);
+      }
+
       await ctx.db.insert("itemMasks", {
         itemId: item._id,
         revision,
@@ -197,6 +238,18 @@ export const persistSegmentation = internalMutation({
         maskSource: result.maskSource,
         maskRevision: revision,
         segmentationConfidence: result.confidence,
+        cropStorageId: undefined,
+        cropMimeType: undefined,
+        cropRevision: undefined,
+        cropStatus: "missing",
+        marketplaceImageStorageId: undefined,
+        marketplaceImageJobId: undefined,
+        marketplaceImageRevision: undefined,
+        marketplaceImageMimeType: undefined,
+        marketplaceImageMs: undefined,
+        marketplaceImageErrorCode: undefined,
+        marketplaceImageErrorMessage: undefined,
+        marketplaceImageStatus: "idle",
         updatedAt: now,
       });
     }

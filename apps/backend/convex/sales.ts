@@ -75,6 +75,19 @@ export const getSellerView = query({
         const polygons = (mask?.polygons ?? []).map((polygon) =>
           polygon.map((point) => [point[0]!, point[1]!] as [number, number]),
         );
+        const cropIsCurrent =
+          item.cropStorageId !== undefined &&
+          item.cropRevision === item.maskRevision;
+        const cropUrl = cropIsCurrent
+          ? await ctx.storage.getUrl(item.cropStorageId!)
+          : null;
+        const marketplaceImageIsCurrent =
+          cropIsCurrent &&
+          item.marketplaceImageStorageId !== undefined &&
+          item.marketplaceImageRevision === item.cropRevision;
+        const marketplaceImageUrl = marketplaceImageIsCurrent
+          ? await ctx.storage.getUrl(item.marketplaceImageStorageId!)
+          : null;
 
         return {
           id: item._id,
@@ -90,6 +103,33 @@ export const getSellerView = query({
           maskRevision: item.maskRevision,
           polygons,
           segmentationConfidence: item.segmentationConfidence ?? null,
+          crop: {
+            status: cropIsCurrent ? item.cropStatus : "missing",
+            revision: cropIsCurrent ? (item.cropRevision ?? null) : null,
+            url: cropUrl,
+            mimeType: cropIsCurrent ? (item.cropMimeType ?? null) : null,
+          },
+          marketplaceImage: {
+            status: cropIsCurrent ? item.marketplaceImageStatus : "idle",
+            revision:
+              cropIsCurrent && item.marketplaceImageStatus !== "idle"
+                ? (item.cropRevision ?? null)
+                : null,
+            url: marketplaceImageUrl,
+            mimeType: marketplaceImageIsCurrent
+              ? (item.marketplaceImageMimeType ?? null)
+              : null,
+            durationMs: cropIsCurrent ? (item.marketplaceImageMs ?? null) : null,
+            error:
+              cropIsCurrent &&
+              item.marketplaceImageErrorCode &&
+              item.marketplaceImageErrorMessage
+                ? {
+                    code: item.marketplaceImageErrorCode,
+                    message: item.marketplaceImageErrorMessage,
+                  }
+                : null,
+          },
         };
       }),
     );

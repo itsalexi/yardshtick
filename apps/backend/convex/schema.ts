@@ -2,8 +2,11 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 import {
+  cropStatusValidator,
   imageMimeTypeValidator,
   maskSourceValidator,
+  marketplaceImageStatusValidator,
+  marketplaceJobStatusValidator,
   pixelBoxValidator,
   polygonsValidator,
   processingStageValidator,
@@ -50,21 +53,17 @@ export default defineSchema({
     segmentationConfidence: v.optional(v.number()),
     maskRevision: v.number(),
     cropStorageId: v.optional(v.id("_storage")),
+    cropMimeType: v.optional(imageMimeTypeValidator),
     cropRevision: v.optional(v.number()),
-    cropStatus: v.union(
-      v.literal("missing"),
-      v.literal("uploading"),
-      v.literal("ready"),
-      v.literal("failed"),
-    ),
+    cropStatus: cropStatusValidator,
     marketplaceImageStorageId: v.optional(v.id("_storage")),
-    marketplaceImageStatus: v.union(
-      v.literal("idle"),
-      v.literal("pending"),
-      v.literal("generating"),
-      v.literal("ready"),
-      v.literal("failed"),
-    ),
+    marketplaceImageJobId: v.optional(v.id("marketplaceImageJobs")),
+    marketplaceImageRevision: v.optional(v.number()),
+    marketplaceImageMimeType: v.optional(imageMimeTypeValidator),
+    marketplaceImageMs: v.optional(v.number()),
+    marketplaceImageErrorCode: v.optional(v.string()),
+    marketplaceImageErrorMessage: v.optional(v.string()),
+    marketplaceImageStatus: marketplaceImageStatusValidator,
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -105,4 +104,21 @@ export default defineSchema({
   })
     .index("by_saleId", ["saleId"])
     .index("by_saleId_and_runId", ["saleId", "runId"]),
+  marketplaceImageJobs: defineTable({
+    itemId: v.id("items"),
+    cropStorageId: v.id("_storage"),
+    cropRevision: v.number(),
+    mimeType: imageMimeTypeValidator,
+    status: marketplaceJobStatusValidator,
+    generatedStorageId: v.optional(v.id("_storage")),
+    durationMs: v.optional(v.number()),
+    errorCode: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_status_and_createdAt", ["status", "createdAt"])
+    .index("by_itemId", ["itemId"])
+    .index("by_itemId_and_cropRevision", ["itemId", "cropRevision"]),
 });

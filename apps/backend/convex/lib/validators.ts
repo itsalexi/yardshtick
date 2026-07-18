@@ -57,6 +57,29 @@ export const maskSourceValidator = v.union(
   v.literal("bbox"),
 );
 
+export const cropStatusValidator = v.union(
+  v.literal("missing"),
+  v.literal("uploading"),
+  v.literal("ready"),
+  v.literal("failed"),
+);
+
+export const marketplaceImageStatusValidator = v.union(
+  v.literal("idle"),
+  v.literal("pending"),
+  v.literal("generating"),
+  v.literal("ready"),
+  v.literal("failed"),
+);
+
+export const marketplaceJobStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("generating"),
+  v.literal("complete"),
+  v.literal("failed"),
+  v.literal("stale"),
+);
+
 export const candidateValidator = v.object({
   tempId: v.string(),
   displayName: v.string(),
@@ -104,6 +127,20 @@ export const sellerViewItemValidator = v.object({
   maskRevision: v.number(),
   polygons: polygonsValidator,
   segmentationConfidence: v.union(v.number(), v.null()),
+  crop: v.object({
+    status: cropStatusValidator,
+    revision: v.union(v.number(), v.null()),
+    url: v.union(v.string(), v.null()),
+    mimeType: v.union(imageMimeTypeValidator, v.null()),
+  }),
+  marketplaceImage: v.object({
+    status: marketplaceImageStatusValidator,
+    revision: v.union(v.number(), v.null()),
+    url: v.union(v.string(), v.null()),
+    mimeType: v.union(imageMimeTypeValidator, v.null()),
+    durationMs: v.union(v.number(), v.null()),
+    error: v.union(safeErrorValidator, v.null()),
+  }),
 });
 
 export const sellerViewValidator = v.object({

@@ -205,4 +205,175 @@ describe("scan persistence", () => {
       polygons: [],
     });
   });
+
+  it("makes pending image jobs stale and removes old item assets on rescan", async () => {
+    const t = convexTest(schema, modules);
+    const sceneStorageId = await t.run((ctx) =>
+      ctx.storage.store(new Blob(["scene"], { type: "image/jpeg" })),
+    );
+    const saleId = await t.mutation(createDraft, {
+      storageId: sceneStorageId,
+      metadata: { width: 2048, height: 1536, mimeType: "image/jpeg" },
+    });
+    const old = await t.run(async (ctx) => {
+      const cropStorageId = await ctx.storage.store(
+        new Blob(["crop"], { type: "image/webp" }),
+      );
+      const generatedStorageId = await ctx.storage.store(
+        new Blob(["generated"], { type: "image/jpeg" }),
+      );
+      const itemId = await ctx.db.insert("items", {
+        saleId,
+        tempId: "old-item",
+        sortOrder: 0,
+        selected: true,
+        source: "ai",
+        title: "Old item",
+        category: "Test",
+        confidence: 0.9,
+        roughBox: { x1: 10, y1: 10, x2: 500, y2: 500 },
+        maskSource: "bbox",
+        maskRevision: 1,
+        cropStorageId,
+        cropMimeType: "image/webp",
+        cropRevision: 1,
+        cropStatus: "ready",
+        marketplaceImageStorageId: generatedStorageId,
+        marketplaceImageRevision: 1,
+        marketplaceImageMimeType: "image/jpeg",
+        marketplaceImageStatus: "ready",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const jobId = await ctx.db.insert("marketplaceImageJobs", {
+        itemId,
+        cropStorageId,
+        cropRevision: 1,
+        mimeType: "image/webp",
+        status: "pending",
+        createdAt: Date.now(),
+      });
+      return { itemId, jobId, cropStorageId, generatedStorageId };
+    });
+    const run = await t.mutation(beginRun, { saleId });
+
+    await expect(
+      t.mutation(persistCandidates, {
+        saleId,
+        runId: run.runId,
+        candidates: [],
+        discoveryMs: 10,
+      }),
+    ).resolves.toBe(true);
+
+    const state = await t.run(async (ctx) => ({
+      item: await ctx.db.get(old.itemId),
+      job: await ctx.db.get(old.jobId),
+      crop: await ctx.db.system.get("_storage", old.cropStorageId),
+      generated: await ctx.db.system.get("_storage", old.generatedStorageId),
+    }));
+    expect(state.item).toBeNull();
+    expect(state.job?.status).toBe("stale");
+    expect(state.crop).toBeNull();
+    expect(state.generated).toBeNull();
+  });
+
+  it("invalidates crop enrichment when a mask revision advances", async () => {
+    const t = convexTest(schema, modules);
+    const sceneStorageId = await t.run((ctx) =>
+      ctx.storage.store(new Blob(["scene"], { type: "image/jpeg" })),
+    );
+    const saleId = await t.mutation(createDraft, {
+      storageId: sceneStorageId,
+      metadata: { width: 1000, height: 1000, mimeType: "image/jpeg" },
+    });
+    const run = await t.mutation(beginRun, { saleId });
+    await t.mutation(persistCandidates, {
+      saleId,
+      runId: run.runId,
+      candidates: [
+        {
+          tempId: "phone",
+          displayName: "Phone",
+          category: "Electronics",
+          sellabilityConfidence: 0.9,
+          roughBox: { x1: 100, y1: 100, x2: 800, y2: 800 },
+        },
+      ],
+      discoveryMs: 10,
+    });
+    const result = {
+      tempId: "phone",
+      maskSource: "bbox" as const,
+      polygons: [],
+      refinedBox: { x1: 100, y1: 100, x2: 800, y2: 800 },
+    };
+    await t.mutation(persistSegmentation, {
+      saleId,
+      runId: run.runId,
+      results: [result],
+      segmentationMs: 20,
+    });
+
+    const enriched = await t.run(async (ctx) => {
+      const item = await ctx.db
+        .query("items")
+        .withIndex("by_saleId", (q) => q.eq("saleId", saleId))
+        .unique();
+      if (!item) throw new Error("Expected the segmented item fixture.");
+      const cropStorageId = await ctx.storage.store(
+        new Blob(["crop"], { type: "image/webp" }),
+      );
+      const generatedStorageId = await ctx.storage.store(
+        new Blob(["generated"], { type: "image/jpeg" }),
+      );
+      const jobId = await ctx.db.insert("marketplaceImageJobs", {
+        itemId: item._id,
+        cropStorageId,
+        cropRevision: 1,
+        mimeType: "image/webp",
+        status: "pending",
+        createdAt: Date.now(),
+      });
+      await ctx.db.patch("items", item._id, {
+        cropStorageId,
+        cropMimeType: "image/webp",
+        cropRevision: 1,
+        cropStatus: "ready",
+        marketplaceImageStorageId: generatedStorageId,
+        marketplaceImageJobId: jobId,
+        marketplaceImageRevision: 1,
+        marketplaceImageMimeType: "image/jpeg",
+        marketplaceImageStatus: "ready",
+      });
+      return { itemId: item._id, jobId, cropStorageId, generatedStorageId };
+    });
+
+    await t.mutation(persistSegmentation, {
+      saleId,
+      runId: run.runId,
+      results: [result],
+      segmentationMs: 25,
+    });
+
+    const state = await t.run(async (ctx) => ({
+      item: await ctx.db.get(enriched.itemId),
+      job: await ctx.db.get(enriched.jobId),
+      crop: await ctx.db.system.get("_storage", enriched.cropStorageId),
+      generated: await ctx.db.system.get(
+        "_storage",
+        enriched.generatedStorageId,
+      ),
+    }));
+    expect(state.item).toMatchObject({
+      maskRevision: 2,
+      cropStatus: "missing",
+      marketplaceImageStatus: "idle",
+    });
+    expect(state.item?.cropStorageId).toBeUndefined();
+    expect(state.item?.marketplaceImageJobId).toBeUndefined();
+    expect(state.job?.status).toBe("stale");
+    expect(state.crop).toBeNull();
+    expect(state.generated).toBeNull();
+  });
 });
