@@ -1,7 +1,11 @@
 import { demoSale } from "@yard/mock-data";
 import { describe, expect, it } from "vitest";
 
-import { applyListingDrafts, rememberListingDraft } from "./listing-drafts";
+import {
+  applyListingDrafts,
+  rememberListingDraft,
+  rememberSelectionDraft,
+} from "./listing-drafts";
 
 describe("listing drafts", () => {
   it("keeps local form edits when a polling response arrives", () => {
@@ -38,5 +42,15 @@ describe("listing drafts", () => {
     const mergedItem = merged.items.find((candidate) => candidate.id === item.id);
 
     expect(mergedItem).toHaveProperty("finalPricePhp", undefined);
+  });
+
+  it("keeps a local selection when a stale polling response arrives", () => {
+    const item = demoSale.items[0];
+    const drafts = rememberSelectionDraft({}, item.id, false);
+    const merged = applyListingDrafts(structuredClone(demoSale), drafts);
+
+    expect(merged.items.find((candidate) => candidate.id === item.id)?.selected).toBe(
+      false,
+    );
   });
 });

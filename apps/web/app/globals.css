@@ -1279,6 +1279,114 @@ input[type="text"]:focus {
   animation: fadeup 0.28s ease both;
 }
 
+/* ---------- detected item quick select ---------- */
+
+.item-checklist {
+  overflow: hidden;
+  background: var(--card);
+  border-radius: 17px;
+  box-shadow:
+    0 0 0 1px rgba(20, 20, 22, 0.07),
+    0 3px 12px rgba(20, 20, 22, 0.06);
+}
+
+.item-checklist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 8px;
+}
+
+.item-checklist-header h2 {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.item-checklist > .muted {
+  padding: 0 14px 12px;
+  font-size: 12.5px;
+}
+
+.item-checklist-list {
+  border-top: 1px solid var(--line);
+}
+
+.item-checklist-row {
+  width: 100%;
+  min-height: 56px;
+  padding: 9px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition-property: background-color, scale;
+  transition-duration: 150ms;
+}
+
+.item-checklist-row:last-child {
+  border-bottom: 0;
+}
+
+.item-checklist-row:active {
+  scale: 0.96;
+}
+
+.item-checklist-row[data-selected="true"] {
+  background: var(--accent-soft);
+}
+
+.item-checkmark {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: #fff;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.item-checklist-row[data-selected="true"] .item-checkmark {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.item-checklist-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-checklist-copy strong,
+.item-checklist-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-checklist-copy strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.item-checklist-copy span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 /* ---------- motion ---------- */
 
 @keyframes popin {

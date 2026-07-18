@@ -179,8 +179,16 @@ describe("scan persistence", () => {
       "pending",
     ]);
     expect(progressive?.items).toEqual([
-      expect.objectContaining({ condition: "good", status: "available" }),
-      expect.objectContaining({ condition: "good", status: "available" }),
+      expect.objectContaining({
+        selected: false,
+        condition: "good",
+        status: "available",
+      }),
+      expect.objectContaining({
+        selected: false,
+        condition: "good",
+        status: "available",
+      }),
     ]);
 
     await expect(

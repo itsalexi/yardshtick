@@ -12,10 +12,12 @@ import {
   releaseCapturePreview,
 } from "@/src/features/capture/preview-memory";
 import { AnalysisStatus } from "@/src/features/scan/analysis-status";
+import { ItemChecklist } from "@/src/features/scan/item-checklist";
 import { ItemReview } from "@/src/features/item-review/item-review";
 import {
   applyListingDrafts,
   rememberListingDraft,
+  rememberSelectionDraft,
   type ListingDrafts,
 } from "@/src/features/item-review/listing-drafts";
 import {
@@ -128,13 +130,40 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
 
   async function toggleItem(item: YardItem) {
     if (!sale || phase !== "detect") return;
+    const selected = !item.selected;
+    listingDraftsRef.current = rememberSelectionDraft(
+      listingDraftsRef.current,
+      item.id,
+      selected,
+    );
     setSale({
       ...sale,
       items: sale.items.map((candidate) =>
-        candidate.id === item.id ? { ...candidate, selected: !item.selected } : candidate,
+        candidate.id === item.id ? { ...candidate, selected } : candidate,
       ),
     });
-    await service.setItemSelected(item.id, !item.selected);
+    try {
+      await service.setItemSelected(item.id, selected);
+    } catch (error) {
+      listingDraftsRef.current = rememberSelectionDraft(
+        listingDraftsRef.current,
+        item.id,
+        item.selected,
+      );
+      setSale((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((candidate) =>
+                candidate.id === item.id
+                  ? { ...candidate, selected: item.selected }
+                  : candidate,
+              ),
+            }
+          : current,
+      );
+      setToast(error instanceof Error ? error.message : "Could not update that item.");
+    }
   }
 
   async function patchItem(
@@ -164,6 +193,11 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
   }
 
   async function removeItem(itemId: string) {
+    listingDraftsRef.current = rememberSelectionDraft(
+      listingDraftsRef.current,
+      itemId,
+      false,
+    );
     await service.setItemSelected(itemId, false);
     setSale((current) =>
       current
@@ -296,6 +330,7 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
             <p className="muted" style={{ textAlign: "center" }}>
               Tap the items on your scene to include them.
             </p>
+            <ItemChecklist items={sale.items} onToggle={(item) => void toggleItem(item)} />
           </div>
           <div className="footer">
             <button

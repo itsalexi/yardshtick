@@ -142,7 +142,7 @@ export const persistCandidates = internalMutation({
         saleId,
         tempId: candidate.tempId,
         sortOrder,
-        selected: true,
+        selected: false,
         source: "ai",
         title: candidate.displayName,
         category: candidate.category,
