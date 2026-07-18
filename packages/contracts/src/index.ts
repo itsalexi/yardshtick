@@ -1,14 +1,9 @@
 import { z } from "zod";
 
-export const pixelBoxSchema = z.object({
-  x1: z.number().finite(),
-  y1: z.number().finite(),
-  x2: z.number().finite(),
-  y2: z.number().finite(),
-});
+import { pixelBoxSchema, polygonSchema } from "./geometry";
 
-export const pixelPointSchema = z.tuple([z.number().finite(), z.number().finite()]);
-export const polygonSchema = z.array(pixelPointSchema).min(3);
+export * from "./geometry";
+export * from "./pipeline";
 
 export const processingStageSchema = z.enum([
   "uploaded",
@@ -74,8 +69,6 @@ export const sceneCandidateSchema = z.object({
   sellabilityConfidence: z.number().min(0).max(1),
 });
 
-export type PixelBox = z.infer<typeof pixelBoxSchema>;
-export type PixelPoint = z.infer<typeof pixelPointSchema>;
 export type ProcessingStage = z.infer<typeof processingStageSchema>;
 export type PriceStrategy = z.infer<typeof priceStrategySchema>;
 export type YardItem = z.infer<typeof yardItemSchema>;
