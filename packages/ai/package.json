@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@yard/contracts": "workspace:*"
+    "@yard/contracts": "workspace:*",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@yard/eslint-config": "workspace:*",

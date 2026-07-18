@@ -1,0 +1,14 @@
+{
+  "id": "resp_1",
+  "output": [
+    {
+      "type": "message",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"candidates\":[{\"tempId\":\"phone\",\"displayName\":\"Smartphone\",\"category\":\"Electronics\",\"sellabilityConfidence\":0.92,\"box\":{\"xMin\":100,\"yMin\":100,\"xMax\":500,\"yMax\":900}},{\"tempId\":\"phone-copy\",\"displayName\":\"Phone\",\"category\":\"Electronics\",\"sellabilityConfidence\":0.7,\"box\":{\"xMin\":105,\"yMin\":105,\"xMax\":498,\"yMax\":895}},{\"tempId\":\"table\",\"displayName\":\"Table\",\"category\":\"Furniture\",\"sellabilityConfidence\":0.2,\"box\":{\"xMin\":0,\"yMin\":500,\"xMax\":1000,\"yMax\":1000}}]}"
+        }
+      ]
+    }
+  ]
+}

@@ -381,9 +381,11 @@ export type SegmentationResult = { items: SegmentationItem[]; polygonCount: numb
 const body = {
   image: { type: "base64", value: toBase64DataUrl(input.image, input.mimeType) },
   image_id: input.imageId,
-  model_id: "hiera_tiny",
-  prompts: input.candidates.map(({ roughBox }) => ({ box: pixelBoxToRoboflowBox(roughBox) })),
-  output_format: "json",
+  prompts: {
+    prompts: input.candidates.map(({ roughBox }) => ({ box: pixelBoxToRoboflowBox(roughBox) })),
+  },
+  sam2_version_id: "hiera_tiny",
+  format: "json",
   multimask_output: false,
 };
 ```
