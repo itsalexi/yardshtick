@@ -77,6 +77,31 @@ const completeRun = makeFunctionReference<
 >("scanModel:completeRun");
 
 describe("scan persistence", () => {
+  it("records the current discovery version when an older sale is rescanned", async () => {
+    const t = convexTest(schema, modules);
+    const storageId = await t.run(async (ctx) =>
+      ctx.storage.store(new Blob(["image"], { type: "image/jpeg" })),
+    );
+    const saleId = await t.mutation(createDraft, {
+      storageId,
+      metadata: { width: 2048, height: 1536, mimeType: "image/jpeg" },
+    });
+    await t.run((ctx) =>
+      ctx.db.patch("sales", saleId, {
+        promptVersion: "discovery-v1",
+        providerVersion: "legacy-provider",
+      }),
+    );
+
+    await t.mutation(beginRun, { saleId });
+
+    const sale = await t.run((ctx) => ctx.db.get("sales", saleId));
+    expect(sale).toMatchObject({
+      promptVersion: "discovery-v2",
+      providerVersion: "gpt-5.6-sol+sam2-hiera-tiny",
+    });
+  });
+
   it("shows progressive boxes and rejects stale run writes", async () => {
     const t = convexTest(schema, modules);
     const storageId = await t.run(async (ctx) =>

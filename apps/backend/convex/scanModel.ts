@@ -6,6 +6,10 @@ import {
   imageMimeTypeValidator,
   segmentationResultValidator,
 } from "./lib/validators";
+import {
+  DISCOVERY_PROMPT_VERSION,
+  DISCOVERY_PROVIDER_VERSION,
+} from "./lib/versions";
 
 export const beginRun = internalMutation({
   args: { saleId: v.id("sales") },
@@ -49,6 +53,8 @@ export const beginRun = internalMutation({
       processingStage: "discovering",
       progress: 10,
       activeRunId: runId,
+      promptVersion: DISCOVERY_PROMPT_VERSION,
+      providerVersion: DISCOVERY_PROVIDER_VERSION,
       errorCode: undefined,
       errorMessage: undefined,
       completedAt: undefined,
