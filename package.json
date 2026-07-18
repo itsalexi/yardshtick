@@ -4,6 +4,7 @@
   "packageManager": "pnpm@10.33.2",
   "scripts": {
     "build": "turbo run build",
+    "dataset:seed": "pnpm --filter @yard/backend dataset:seed",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",

@@ -36,7 +36,7 @@
 - `apps/backend/convex/samples.ts`: idempotent fixture sale creation and fixture listing.
 - `apps/backend/convex/scanModel.ts`: internal run transitions and progressive persistence.
 - `apps/backend/convex/scan.ts`: Node action that coordinates discovery and segmentation.
-- `scripts/seed-dataset.ts`: local-only fixture uploader using the public Convex functions.
+- `apps/backend/scripts/seed-dataset.ts`: local-only fixture uploader using the public Convex functions.
 - `apps/lab/src/convex.ts`: named function references without generated backend imports.
 - `apps/lab/src/geometry.ts`: canonical/display scaling and SVG path helpers.
 - `apps/lab/src/App.tsx`: fixture/custom upload, scan controls, reactive diagnostics, and overlays.
@@ -553,9 +553,11 @@ git commit -m "feat: orchestrate progressive scene scans"
 ### Task 6: Add Idempotent Dataset Seeding
 
 **Files:**
-- Create: `scripts/seed-dataset.ts`
+- Create: `apps/backend/scripts/seed-dataset.ts`
+- Create: `apps/backend/scripts/seed-dataset.test.ts`
 - Modify: `package.json`
-- Modify: `packages/ai/package.json`
+- Modify: `apps/backend/package.json`
+- Modify: `apps/backend/tsconfig.json`
 
 **Interfaces:**
 - Consumes: `CONVEX_URL`, the six manifest entries, and the public upload/sample functions.
@@ -574,15 +576,15 @@ it("uploads only missing fixture keys", () => {
 
 - [ ] **Step 2: Run the test and confirm the helper is missing**
 
-Run: `pnpm exec vitest run scripts/seed-dataset.test.ts`
+Run: `pnpm --filter @yard/backend test -- seed-dataset.test.ts`
 
 Expected: FAIL resolving `./seed-dataset`.
 
 - [ ] **Step 3: Implement the uploader with `ConvexHttpClient` and named references**
 
-The script reads `CONVEX_URL` from `apps/backend/.env.local` only when it is absent from the process environment, calls `samples.list`, and uploads only missing files. For each file it calls `files.generateUploadUrl`, performs a `PUT` with the fixture MIME type, parses `{ storageId }`, and calls `samples.createSale` with the manifest dimensions and stable key.
+The script reads `CONVEX_URL` from `apps/backend/.env.local` only when it is absent from the process environment, calls `samples.list`, and uploads only missing files. For each file it calls `files.generateUploadUrl`, performs a `POST` with the fixture MIME type, parses `{ storageId }`, and calls `samples.createSale` with the manifest dimensions and stable key.
 
-Add root script `"dataset:seed": "tsx scripts/seed-dataset.ts"` and install `tsx` at the root plus the minimum package export needed to import the manifest.
+Add backend script `"dataset:seed": "tsx scripts/seed-dataset.ts"`, root wrapper `"dataset:seed": "pnpm --filter @yard/backend dataset:seed"`, install `tsx` in `@yard/backend`, and include `scripts/**/*.ts` in its TypeScript project.
 
 - [ ] **Step 4: Seed twice and prove idempotency**
 
@@ -593,7 +595,7 @@ Expected: first run creates any missing fixtures; second run reports all six as 
 - [ ] **Step 5: Commit the seed command**
 
 ```sh
-git add package.json packages/ai/package.json scripts pnpm-lock.yaml
+git add package.json apps/backend/package.json apps/backend/tsconfig.json apps/backend/scripts pnpm-lock.yaml
 git commit -m "feat: seed sample scenes into Convex"
 ```
 
