@@ -691,8 +691,10 @@ git commit -m "feat: add AI pipeline testing lab"
 ### Task 8: Run the First Live Six-Scene Evaluation
 
 **Files:**
-- Create: `scripts/evaluate-scenes.ts`
+- Create: `apps/backend/scripts/evaluate-scenes.ts`
+- Create: `apps/backend/scripts/evaluate-scenes.test.ts`
 - Create: `artifacts/evaluations/.gitkeep`
+- Modify: `apps/backend/package.json`
 - Modify: `package.json`
 - Modify: `.gitignore`
 
@@ -718,7 +720,7 @@ The evaluator calls `samples.list`, runs each sale sequentially to limit provide
 
 - [ ] **Step 3: Run recorded tests and one live pass**
 
-Run: `pnpm exec vitest run scripts/evaluate-scenes.test.ts`
+Run: `pnpm --filter @yard/backend test -- evaluate-scenes.test.ts`
 
 Expected: semantic matching tests PASS.
 
@@ -735,7 +737,7 @@ Expected: the fixture picker shows all six scenes; at least one multi-object sca
 - [ ] **Step 5: Commit the evaluator and final slice fixes**
 
 ```sh
-git add package.json scripts/evaluate-scenes.ts scripts/evaluate-scenes.test.ts artifacts/evaluations/.gitkeep .gitignore pnpm-lock.yaml
+git add package.json apps/backend/package.json apps/backend/scripts/evaluate-scenes.ts apps/backend/scripts/evaluate-scenes.test.ts artifacts/evaluations/.gitkeep .gitignore docs/superpowers/plans/2026-07-18-scene-scan-and-lab.md
 git commit -m "test: add live scene evaluation runner"
 ```
 

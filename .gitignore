@@ -5,6 +5,8 @@ dist/
 coverage/
 playwright-report/
 test-results/
+artifacts/evaluations/*
+!artifacts/evaluations/.gitkeep
 .env
 .env.local
 .env.*.local

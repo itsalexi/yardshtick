@@ -8,6 +8,7 @@
     "dev": "turbo run dev",
     "lab": "pnpm --filter @yard/lab dev",
     "lint": "turbo run lint",
+    "smoke:scenes": "pnpm --filter @yard/backend smoke:scenes",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },
