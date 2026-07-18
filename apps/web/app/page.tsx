@@ -1,43 +1,80 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+
 import { getYardService } from "@/src/services/yard-service";
 
-export default async function Home() {
-  const sale = await getYardService().getSale("sale_demo");
+export default function CapturePage() {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function capture() {
+    if (busy) return;
+    setBusy(true);
+    const sale = await getYardService().createDraft({
+      file: new Blob(),
+      width: 2048,
+      height: 1536,
+    });
+    await getYardService().startScan(sale.id);
+    router.push(`/scan/${sale.id}`);
+  }
 
   return (
-    <main>
-      <header>
-        <span className="eyebrow">Hackathon workspace ready</span>
-        <h1>One photo. A whole garage sale.</h1>
-        <p>
-          The frontend is currently powered by shared, validated mock contracts. Convex can
-          replace the adapter later without changing this UI.
+    <main className="screen">
+      <div className="topbar" style={{ background: "#141416", borderBottom: "none" }}>
+        <span className="wordmark" style={{ color: "#fff" }}>
+          Yard
+        </span>
+        <span className="label" style={{ color: "rgba(255,255,255,.5)" }}>
+          Sell everything you see
+        </span>
+      </div>
+
+      <div className="viewfinder">
+        <span className="corner tl" />
+        <span className="corner tr" />
+        <span className="corner bl" />
+        <span className="corner br" />
+
+        <p style={{ color: "rgba(255,255,255,.75)", textAlign: "center", maxWidth: 240 }}>
+          Point at a room, table, closet, or pile.
         </p>
-      </header>
 
-      <section aria-labelledby="demo-heading">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">Mock service</span>
-            <h2 id="demo-heading">{sale.title}</h2>
-          </div>
-          <strong>{sale.items.length} items detected</strong>
-        </div>
+        <button
+          type="button"
+          className="shutter"
+          onClick={capture}
+          disabled={busy}
+          aria-label="Take photo"
+        />
 
-        <div className="item-grid">
-          {sale.items.map((item, index) => (
-            <article key={item.id}>
-              <div className="item-visual" aria-hidden="true">
-                <span>{String(index + 1).padStart(2, "0")}</span>
-              </div>
-              <div>
-                <small>{item.category}</small>
-                <h3>{item.title}</h3>
-                <p>₱{item.finalPricePhp?.toLocaleString("en-PH")}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            background: "none",
+            border: "none",
+            color: "rgba(255,255,255,.6)",
+            fontSize: 13,
+            textDecoration: "underline",
+            cursor: "pointer",
+            minHeight: 44,
+          }}
+        >
+          or upload a photo
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={capture}
+        />
+      </div>
     </main>
   );
 }

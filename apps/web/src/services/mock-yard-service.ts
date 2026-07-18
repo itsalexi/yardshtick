@@ -1,5 +1,5 @@
 import type { SaleView, Storefront, YardItem, YardService } from "@yard/contracts";
-import { demoSale, demoStorefront } from "@yard/mock-data";
+import { demoSale } from "@yard/mock-data";
 
 export class MockYardService implements YardService {
   private sale: SaleView = structuredClone(demoSale);
@@ -30,22 +30,32 @@ export class MockYardService implements YardService {
   }
 
   async publishSale(): Promise<Storefront> {
-    return {
-      slug: this.sale.slug,
-      title: this.sale.title,
-      items: this.sale.items.filter((item) => item.selected),
-    };
+    this.sale.status = "published";
+    return this.storefrontFromSale();
   }
 
   async getStorefront(): Promise<Storefront> {
-    return structuredClone(demoStorefront);
+    return this.storefrontFromSale();
   }
 
   async reserveItem(_slug: string, itemId: string, buyerName: string): Promise<void> {
-    this.sale.items = this.sale.items.map((item) =>
-      item.id === itemId
-        ? { ...item, status: "reserved" as const, reservedByName: buyerName }
-        : item,
+    const item = this.sale.items.find((candidate) => candidate.id === itemId);
+    if (!item) throw new Error("Item not found");
+    if (item.status !== "available") {
+      throw new Error("Someone reserved this just before you.");
+    }
+    this.sale.items = this.sale.items.map((candidate) =>
+      candidate.id === itemId
+        ? { ...candidate, status: "reserved" as const, reservedByName: buyerName }
+        : candidate,
     );
+  }
+
+  private storefrontFromSale(): Storefront {
+    return {
+      slug: this.sale.slug,
+      title: this.sale.title,
+      items: structuredClone(this.sale.items.filter((item) => item.selected)),
+    };
   }
 }
