@@ -30,11 +30,20 @@ export const generate = internalAction({
         return null;
       }
 
-      const crop = await ctx.storage.get(input.cropStorageId);
+      const [crop, scene] = await Promise.all([
+        ctx.storage.get(input.cropStorageId),
+        ctx.storage.get(input.sceneStorageId),
+      ]);
       if (!crop) {
         throw new ProviderError(
           "CROP_NOT_FOUND",
           "The real item crop is no longer available.",
+        );
+      }
+      if (!scene) {
+        throw new ProviderError(
+          "SCENE_NOT_FOUND",
+          "The original sale image is no longer available.",
         );
       }
       const apiKey = process.env.OPENAI_API_KEY;
@@ -49,6 +58,8 @@ export const generate = internalAction({
         apiKey,
         image: new Uint8Array(await crop.arrayBuffer()),
         mimeType: input.mimeType,
+        contextImage: new Uint8Array(await scene.arrayBuffer()),
+        contextMimeType: input.sceneMimeType,
         signal: AbortSignal.timeout(120_000),
       });
       const generatedCopy = new Uint8Array(generated.byteLength);

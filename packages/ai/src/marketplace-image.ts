@@ -8,24 +8,31 @@ export type MarketplaceImageInput = {
   apiKey: string;
   image: Uint8Array;
   mimeType: "image/jpeg" | "image/png" | "image/webp";
+  contextImage: Uint8Array;
+  contextMimeType: "image/jpeg" | "image/png" | "image/webp";
   fetcher?: ProviderFetcher;
   signal?: AbortSignal;
 };
 
 const marketplaceImagePrompt = [
-  "Create a polished marketplace product photo of the exact item in the input image.",
+  "Create a polished marketplace product photo of the exact item shown in the first input image.",
+  "The first input image is the isolated item crop; the second input image is the original sale scene for structural reference only.",
+  "Use the scene to recover product structure lost by cropping or segmentation, but do not copy any other scene objects.",
   "Show the entire item fully inside the frame with comfortable margin, balanced scale, and a clear, natural viewing angle.",
   "Gently correct awkward perspective when helpful.",
   "Use a seamless soft-white background, neutral studio lighting, and a subtle contact shadow.",
   "Preserve the product type, materials, color, proportions, visible branding and text, included accessories, and existing wear.",
-  "If the crop or segmentation mask has minor clipped or missing edges, conservatively reconstruct only their obvious natural continuation so the silhouette looks complete.",
-  "Do not add props or accessories, invent major parts or unseen features, repair damage, or erase wear.",
+  "Complete all structurally necessary parts that are visible in the scene or unambiguously implied by the same item's geometry so the product never looks cut off by the mask.",
+  "Do not add props or optional accessories, invent distinctive unseen details, repair damage, or erase wear.",
 ].join(" ");
 
-function fileNameFor(mimeType: MarketplaceImageInput["mimeType"]) {
-  if (mimeType === "image/png") return "item.png";
-  if (mimeType === "image/webp") return "item.webp";
-  return "item.jpg";
+function fileNameFor(
+  mimeType: MarketplaceImageInput["mimeType"],
+  stem: "item" | "scene",
+) {
+  if (mimeType === "image/png") return `${stem}.png`;
+  if (mimeType === "image/webp") return `${stem}.webp`;
+  return `${stem}.jpg`;
 }
 
 function toBlobPart(image: Uint8Array) {
@@ -54,7 +61,12 @@ export async function generateMarketplaceImage(
   form.append(
     "image[]",
     new Blob([toBlobPart(input.image)], { type: input.mimeType }),
-    fileNameFor(input.mimeType),
+    fileNameFor(input.mimeType, "item"),
+  );
+  form.append(
+    "image[]",
+    new Blob([toBlobPart(input.contextImage)], { type: input.contextMimeType }),
+    fileNameFor(input.contextMimeType, "scene"),
   );
   form.set("prompt", marketplaceImagePrompt);
   form.set("n", "1");

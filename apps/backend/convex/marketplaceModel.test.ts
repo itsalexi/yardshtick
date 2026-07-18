@@ -48,6 +48,16 @@ const expireJob = makeFunctionReference<
   { jobId: Id<"marketplaceImageJobs">; startedAt: number },
   boolean
 >("marketplaceModel:expireJob");
+const loadJobInput = makeFunctionReference<
+  "query",
+  { jobId: Id<"marketplaceImageJobs"> },
+  {
+    cropStorageId: Id<"_storage">;
+    sceneStorageId: Id<"_storage">;
+    mimeType: "image/jpeg" | "image/png" | "image/webp";
+    sceneMimeType: "image/jpeg" | "image/png" | "image/webp";
+  } | null
+>("marketplaceModel:loadJobInput");
 
 async function insertItemAndJob(
   t: ReturnType<typeof convexTest>,
@@ -104,11 +114,23 @@ async function insertItemAndJob(
       ...(status === "generating" ? { startedAt: Date.now() } : {}),
     });
     await ctx.db.patch("items", itemId, { marketplaceImageJobId: jobId });
-    return { itemId, jobId, cropStorageId };
+    return { itemId, jobId, cropStorageId, imageStorageId };
   });
 }
 
 describe("marketplace image dispatcher", () => {
+  it("loads the original scene with the isolated crop", async () => {
+    const t = convexTest(schema, modules);
+    const current = await insertItemAndJob(t, "generating");
+
+    await expect(t.query(loadJobInput, { jobId: current.jobId })).resolves.toMatchObject({
+      cropStorageId: current.cropStorageId,
+      sceneStorageId: current.imageStorageId,
+      mimeType: "image/webp",
+      sceneMimeType: "image/jpeg",
+    });
+  });
+
   it("claims at most two pending jobs globally", async () => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);

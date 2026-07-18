@@ -8,7 +8,7 @@ import {
 import { imageMimeTypeValidator } from "./lib/validators";
 
 const MAX_GENERATING_JOBS = 2;
-const MARKETPLACE_JOB_LEASE_MS = 135_000;
+const MARKETPLACE_JOB_LEASE_MS = 180_000;
 
 export const dispatch = internalMutation({
   args: {},
@@ -128,6 +128,8 @@ export const loadJobInput = internalQuery({
       cropStorageId: v.id("_storage"),
       cropRevision: v.number(),
       mimeType: imageMimeTypeValidator,
+      sceneStorageId: v.id("_storage"),
+      sceneMimeType: imageMimeTypeValidator,
       title: v.string(),
       category: v.string(),
     }),
@@ -145,11 +147,15 @@ export const loadJobInput = internalQuery({
     ) {
       return null;
     }
+    const sale = await ctx.db.get(item.saleId);
+    if (!sale) return null;
     return {
       itemId: item._id,
       cropStorageId: job.cropStorageId,
       cropRevision: job.cropRevision,
       mimeType: job.mimeType,
+      sceneStorageId: sale.imageStorageId,
+      sceneMimeType: sale.imageMimeType,
       title: item.title,
       category: item.category,
     };

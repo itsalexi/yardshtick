@@ -8,7 +8,7 @@ describe("generateMarketplaceImage", () => {
     expect(exportedGenerateMarketplaceImage).toBe(generateMarketplaceImage);
   });
 
-  it("sends one crop to GPT Image 2 and decodes the returned JPEG", async () => {
+  it("sends the isolated crop and original scene to GPT Image 2", async () => {
     const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x2b]);
     const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       expect(String(url)).toBe("https://api.openai.com/v1/images/edits");
@@ -34,15 +34,22 @@ describe("generateMarketplaceImage", () => {
       expect(String(prompt)).toContain("Preserve");
       expect(String(prompt)).toContain("Do not add props");
       expect(String(prompt)).toContain("entire item fully inside the frame");
-      expect(String(prompt)).toContain("minor clipped or missing edges");
       expect(String(prompt)).toContain("clear, natural viewing angle");
+      expect(String(prompt)).toContain("first input image");
+      expect(String(prompt)).toContain("second input image");
+      expect(String(prompt)).toContain("structurally necessary parts");
 
       const images = form.getAll("image[]");
-      expect(images).toHaveLength(1);
+      expect(images).toHaveLength(2);
       expect(images[0]).toBeInstanceOf(Blob);
       expect((images[0] as Blob).type).toBe("image/webp");
       expect(new Uint8Array(await (images[0] as Blob).arrayBuffer())).toEqual(
         new Uint8Array([1, 2, 3]),
+      );
+      expect(images[1]).toBeInstanceOf(Blob);
+      expect((images[1] as Blob).type).toBe("image/jpeg");
+      expect(new Uint8Array(await (images[1] as Blob).arrayBuffer())).toEqual(
+        new Uint8Array([4, 5, 6]),
       );
 
       return new Response(
@@ -56,6 +63,8 @@ describe("generateMarketplaceImage", () => {
       apiKey: "test-key",
       image: new Uint8Array([1, 2, 3]),
       mimeType: "image/webp",
+      contextImage: new Uint8Array([4, 5, 6]),
+      contextMimeType: "image/jpeg",
       fetcher,
       signal,
     });
@@ -73,6 +82,8 @@ describe("generateMarketplaceImage", () => {
       apiKey: "test-key",
       image: new Uint8Array([1]),
       mimeType: "image/jpeg",
+      contextImage: new Uint8Array([2]),
+      contextMimeType: "image/jpeg",
       fetcher,
     });
 
@@ -99,6 +110,8 @@ describe("generateMarketplaceImage", () => {
         apiKey: "test-key",
         image: new Uint8Array([1]),
         mimeType: "image/jpeg",
+        contextImage: new Uint8Array([2]),
+        contextMimeType: "image/jpeg",
         fetcher,
       });
 
@@ -124,6 +137,8 @@ describe("generateMarketplaceImage", () => {
         apiKey: "test-key",
         image: new Uint8Array([1]),
         mimeType: "image/png",
+        contextImage: new Uint8Array([2]),
+        contextMimeType: "image/jpeg",
         fetcher,
       }),
     ).rejects.toMatchObject({
