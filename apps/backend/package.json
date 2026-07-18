@@ -7,6 +7,7 @@
     "dataset:seed": "tsx scripts/seed-dataset.ts",
     "dev": "convex dev",
     "lint": "eslint convex scripts",
+    "smoke:product-images": "tsx scripts/smoke-product-images.ts",
     "smoke:scenes": "tsx scripts/evaluate-scenes.ts",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
@@ -22,6 +23,7 @@
     "@yard/typescript-config": "workspace:*",
     "convex-test": "0.0.54",
     "eslint": "10.7.0",
+    "sharp": "0.34.5",
     "tsx": "4.23.1",
     "typescript": "6.0.3",
     "vitest": "4.1.10"

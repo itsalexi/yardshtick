@@ -7,6 +7,7 @@ playwright-report/
 test-results/
 artifacts/evaluations/*
 !artifacts/evaluations/.gitkeep
+artifacts/product-images/*
 .env
 .env.local
 .env.*.local
