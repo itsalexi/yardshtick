@@ -1,8 +1,10 @@
 import type { SampleSale, ScanSellerView } from "@yard/contracts";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LabScreen } from "./App";
+
+afterEach(cleanup);
 
 const samples: SampleSale[] = [
   {
@@ -50,6 +52,20 @@ const sale: ScanSellerView = {
       maskRevision: 0,
       polygons: [],
       segmentationConfidence: null,
+      crop: {
+        status: "missing",
+        revision: null,
+        url: null,
+        mimeType: null,
+      },
+      marketplaceImage: {
+        status: "idle",
+        revision: null,
+        url: null,
+        mimeType: null,
+        durationMs: null,
+        error: null,
+      },
     },
   ],
 };
@@ -71,6 +87,8 @@ describe("LabScreen", () => {
         onRunScan={vi.fn()}
         onUpload={vi.fn()}
         onClear={vi.fn()}
+        onCreateCrop={vi.fn()}
+        onRetryMarketplaceImage={vi.fn()}
       />,
     );
 
@@ -106,10 +124,147 @@ describe("LabScreen", () => {
         onRunScan={onRunScan}
         onUpload={vi.fn()}
         onClear={vi.fn()}
+        onCreateCrop={vi.fn()}
+        onRetryMarketplaceImage={vi.fn()}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: /run scan/i }));
     expect(onRunScan).toHaveBeenCalledOnce();
+  });
+
+  it("creates a crop for a selected segmented item", () => {
+    const onCreateCrop = vi.fn();
+    render(
+      <LabScreen
+        samples={samples}
+        sale={{
+          ...sale,
+          status: "ready",
+          processingStage: "complete",
+          progress: 100,
+          items: [
+            {
+              ...sale.items[0]!,
+              maskSource: "bbox",
+              maskRevision: 1,
+            },
+          ],
+        }}
+        selectedSaleId="sale_phone"
+        selectedItemId="item_phone"
+        busy={null}
+        localError={null}
+        onSelectSale={vi.fn()}
+        onSelectItem={vi.fn()}
+        onRunScan={vi.fn()}
+        onUpload={vi.fn()}
+        onClear={vi.fn()}
+        onCreateCrop={onCreateCrop}
+        onRetryMarketplaceImage={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /create crop & enrich/i }));
+    expect(onCreateCrop).toHaveBeenCalledWith("item_phone");
+  });
+
+  it("shows the permanent real crop beside a ready marketplace image", () => {
+    render(
+      <LabScreen
+        samples={samples}
+        sale={{
+          ...sale,
+          items: [
+            {
+              ...sale.items[0]!,
+              maskSource: "roboflow_sam2",
+              maskRevision: 1,
+              crop: {
+                status: "ready",
+                revision: 1,
+                url: "https://example.test/crop.webp",
+                mimeType: "image/webp",
+              },
+              marketplaceImage: {
+                status: "ready",
+                revision: 1,
+                url: "https://example.test/marketplace.jpeg",
+                mimeType: "image/jpeg",
+                durationMs: 4_200,
+                error: null,
+              },
+            },
+          ],
+        }}
+        selectedSaleId="sale_phone"
+        selectedItemId="item_phone"
+        busy={null}
+        localError={null}
+        onSelectSale={vi.fn()}
+        onSelectItem={vi.fn()}
+        onRunScan={vi.fn()}
+        onUpload={vi.fn()}
+        onClear={vi.fn()}
+        onCreateCrop={vi.fn()}
+        onRetryMarketplaceImage={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByAltText("Real crop for Smartphone")).toBeTruthy();
+    expect(screen.getByAltText("Marketplace photo for Smartphone")).toBeTruthy();
+    expect(screen.getByText("4.2 s")).toBeTruthy();
+  });
+
+  it("keeps the real crop visible and offers retry after generation fails", () => {
+    const onRetryMarketplaceImage = vi.fn();
+    render(
+      <LabScreen
+        samples={samples}
+        sale={{
+          ...sale,
+          items: [
+            {
+              ...sale.items[0]!,
+              maskSource: "bbox",
+              maskRevision: 1,
+              crop: {
+                status: "ready",
+                revision: 1,
+                url: "https://example.test/crop.webp",
+                mimeType: "image/webp",
+              },
+              marketplaceImage: {
+                status: "failed",
+                revision: 1,
+                url: null,
+                mimeType: null,
+                durationMs: 900,
+                error: {
+                  code: "OPENAI_RATE_LIMITED",
+                  message: "OpenAI is temporarily busy.",
+                },
+              },
+            },
+          ],
+        }}
+        selectedSaleId="sale_phone"
+        selectedItemId="item_phone"
+        busy={null}
+        localError={null}
+        onSelectSale={vi.fn()}
+        onSelectItem={vi.fn()}
+        onRunScan={vi.fn()}
+        onUpload={vi.fn()}
+        onClear={vi.fn()}
+        onCreateCrop={vi.fn()}
+        onRetryMarketplaceImage={onRetryMarketplaceImage}
+      />,
+    );
+
+    expect(screen.getByAltText("Real crop for Smartphone")).toBeTruthy();
+    expect(screen.getByText(/real crop is still available/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /retry marketplace image/i }));
+    expect(onRetryMarketplaceImage).toHaveBeenCalledWith("item_phone");
   });
 });

@@ -3,9 +3,10 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { memo, useState, type ChangeEvent, type KeyboardEvent } from "react";
 
 import { functions } from "./convex";
+import { generateItemCrop } from "./crop";
 import { polygonToSvgPoints } from "./geometry";
 
-type BusyState = "uploading" | "running" | null;
+type BusyState = "uploading" | "running" | "cropping" | "retrying" | null;
 
 export type LabScreenProps = {
   samples: SampleSale[] | undefined;
@@ -19,12 +20,19 @@ export type LabScreenProps = {
   onRunScan: () => void;
   onUpload: (file: File) => void;
   onClear: () => void;
+  onCreateCrop: (itemId: string) => void;
+  onRetryMarketplaceImage: (itemId: string) => void;
 };
 
 const supportedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function formatDuration(value: number | undefined) {
   return value === undefined ? "—" : `${Math.round(value)} ms`;
+}
+
+function formatGenerationDuration(value: number | null) {
+  if (value === null) return "—";
+  return `${(value / 1_000).toFixed(1)} s`;
 }
 
 function FixtureList({
@@ -287,9 +295,130 @@ function Viewer({
   );
 }
 
+function EnrichmentPanel({
+  item,
+  busy,
+  onCreateCrop,
+  onRetryMarketplaceImage,
+}: {
+  item: ScanItem | null;
+  busy: BusyState;
+  onCreateCrop: (itemId: string) => void;
+  onRetryMarketplaceImage: (itemId: string) => void;
+}) {
+  if (!item) {
+    return (
+      <section className="enrichment-panel" aria-label="Marketplace image enrichment">
+        <div>
+          <span className="eyebrow">Selected item</span>
+          <h2>Choose an item to create its listing photo.</h2>
+        </div>
+      </section>
+    );
+  }
+
+  const readyForCrop = item.maskRevision > 0 && item.maskSource !== "pending";
+  const cropBusy = busy === "cropping";
+  const retryBusy = busy === "retrying";
+  const generationActive =
+    item.marketplaceImage.status === "pending" ||
+    item.marketplaceImage.status === "generating";
+
+  return (
+    <section className="enrichment-panel" aria-label="Marketplace image enrichment">
+      <div className="enrichment-heading">
+        <div>
+          <span className="eyebrow">Selected item · mask rev {item.maskRevision}</span>
+          <h2>{item.title}</h2>
+        </div>
+        <span className="status-chip" data-status={item.marketplaceImage.status}>
+          {item.marketplaceImage.status}
+        </span>
+      </div>
+
+      <div className="enrichment-actions">
+        <button
+          className="primary-action"
+          disabled={!readyForCrop || busy !== null || generationActive}
+          onClick={() => onCreateCrop(item.id)}
+          type="button"
+        >
+          {cropBusy
+            ? "Creating crop…"
+            : item.crop.status === "ready"
+              ? "Recreate crop & enrich"
+              : readyForCrop
+                ? "Create crop & enrich"
+                : "Waiting for mask"}
+        </button>
+        {item.marketplaceImage.status === "failed" ? (
+          <button
+            className="quiet-action"
+            disabled={busy !== null}
+            onClick={() => onRetryMarketplaceImage(item.id)}
+            type="button"
+          >
+            {retryBusy ? "Retrying…" : "Retry marketplace image"}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="image-comparison">
+        <article className="image-card">
+          <div>
+            <span>Real crop</span>
+            <code>{item.crop.revision === null ? "—" : `rev ${item.crop.revision}`}</code>
+          </div>
+          {item.crop.url ? (
+            <img alt={`Real crop for ${item.title}`} src={item.crop.url} />
+          ) : (
+            <div className="image-placeholder">
+              <span>Source</span>
+              <p>Create a crop from the current mask or box.</p>
+            </div>
+          )}
+        </article>
+
+        <article className="image-card">
+          <div>
+            <span>Marketplace photo</span>
+            <code>{formatGenerationDuration(item.marketplaceImage.durationMs)}</code>
+          </div>
+          {item.marketplaceImage.url ? (
+            <img
+              alt={`Marketplace photo for ${item.title}`}
+              src={item.marketplaceImage.url}
+            />
+          ) : (
+            <div className="image-placeholder" data-state={item.marketplaceImage.status}>
+              <span>{item.marketplaceImage.status}</span>
+              <p>
+                {generationActive
+                  ? "GPT Image 2 is preparing the listing photo."
+                  : item.marketplaceImage.status === "failed"
+                    ? "Real crop is still available. Retry when ready."
+                    : "Attach a real crop to start generation."}
+              </p>
+            </div>
+          )}
+        </article>
+      </div>
+
+      {item.marketplaceImage.error ? (
+        <p className="error-message enrichment-error">
+          <strong>{item.marketplaceImage.error.code}</strong>
+          {item.marketplaceImage.error.message}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export function LabScreen(props: LabScreenProps) {
   const { sale } = props;
   const runActive = sale?.status === "processing" || props.busy === "running";
+  const selectedItem =
+    sale?.items.find(({ id }) => id === props.selectedItemId) ?? null;
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -345,7 +474,7 @@ export function LabScreen(props: LabScreenProps) {
             <div className="action-row">
               <button
                 className="primary-action"
-                disabled={!sale || runActive || props.busy === "uploading"}
+                disabled={!sale || runActive || props.busy !== null}
                 onClick={props.onRunScan}
                 type="button"
               >
@@ -390,6 +519,14 @@ export function LabScreen(props: LabScreenProps) {
             selectedItemId={props.selectedItemId}
             selectedSaleId={props.selectedSaleId}
           />
+          {sale ? (
+            <EnrichmentPanel
+              busy={props.busy}
+              item={selectedItem}
+              onCreateCrop={props.onCreateCrop}
+              onRetryMarketplaceImage={props.onRetryMarketplaceImage}
+            />
+          ) : null}
         </section>
       </div>
     </main>
@@ -416,7 +553,10 @@ export function App() {
     selectedSaleId ? { saleId: selectedSaleId } : "skip",
   );
   const generateUploadUrl = useMutation(functions.generateUploadUrl);
+  const generateCropUploadUrl = useMutation(functions.generateCropUploadUrl);
   const createDraft = useMutation(functions.createDraft);
+  const attachCrop = useMutation(functions.attachCrop);
+  const retryMarketplaceImage = useMutation(functions.retryMarketplaceImage);
   const startScan = useAction(functions.startScan);
 
   function selectSale(saleId: string) {
@@ -481,6 +621,63 @@ export function App() {
     }
   }
 
+  async function createCrop(itemId: string) {
+    const item = sale?.items.find(({ id }) => id === itemId);
+    if (!sale || !item || item.maskRevision <= 0) return;
+    setBusy("cropping");
+    setLocalError(null);
+    try {
+      const [crop, uploadUrl] = await Promise.all([
+        generateItemCrop({
+          imageUrl: sale.image.url,
+          imageSize: { width: sale.image.width, height: sale.image.height },
+          item,
+        }),
+        generateCropUploadUrl({ itemId }),
+      ]);
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": crop.mimeType },
+        body: crop.blob,
+      });
+      if (!response.ok) {
+        throw new Error(`Crop upload failed with status ${response.status}.`);
+      }
+      const payload: unknown = await response.json();
+      if (
+        !payload ||
+        typeof payload !== "object" ||
+        typeof Reflect.get(payload, "storageId") !== "string"
+      ) {
+        throw new Error("Crop upload did not return a storage ID.");
+      }
+      await attachCrop({
+        itemId,
+        storageId: Reflect.get(payload, "storageId") as string,
+        mimeType: crop.mimeType,
+        maskRevision: crop.maskRevision,
+      });
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Item crop failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function retryImage(itemId: string) {
+    setBusy("retrying");
+    setLocalError(null);
+    try {
+      await retryMarketplaceImage({ itemId });
+    } catch (error) {
+      setLocalError(
+        error instanceof Error ? error.message : "Marketplace image retry failed.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <LabScreen
       busy={busy}
@@ -490,6 +687,8 @@ export function App() {
         setSelectedItemId(null);
         setLocalError(null);
       }}
+      onCreateCrop={(itemId) => void createCrop(itemId)}
+      onRetryMarketplaceImage={(itemId) => void retryImage(itemId)}
       onRunScan={() => void runScan()}
       onSelectItem={setSelectedItemId}
       onSelectSale={selectSale}

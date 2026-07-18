@@ -53,3 +53,28 @@ test("collapses the lab to one column on a narrow viewport", async ({ page }) =>
   );
   expect(gridColumns.trim().split(/\s+/)).toHaveLength(1);
 });
+
+test("opens crop and marketplace-image controls for a detected room item", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /speaker-room/i }).click();
+
+  const speaker = page.locator(".item-list").getByRole("button", {
+    name: /pa speaker with tripod/i,
+  });
+  await expect(speaker).toBeVisible();
+  await speaker.click();
+
+  const enrichment = page.getByRole("region", {
+    name: "Marketplace image enrichment",
+  });
+  await expect(enrichment.getByRole("heading", { name: /pa speaker/i })).toBeVisible();
+  await expect(
+    enrichment.getByRole("button", { name: /create crop & enrich/i }),
+  ).toBeEnabled();
+  await expect(enrichment.getByText("Real crop", { exact: true })).toBeVisible();
+  await expect(
+    enrichment.getByText("Marketplace photo", { exact: true }),
+  ).toBeVisible();
+});

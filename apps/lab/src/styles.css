@@ -403,6 +403,159 @@ dd,
   margin: 0 auto;
 }
 
+.enrichment-panel {
+  width: min(100%, 1280px);
+  margin: 22px auto 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.enrichment-panel h2 {
+  margin: 4px 0 0;
+  font-size: clamp(16px, 1.8vw, 22px);
+  letter-spacing: -0.03em;
+}
+
+.enrichment-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.status-chip {
+  padding: 5px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  background: #151815;
+  font-family: "SFMono-Regular", "Cascadia Code", monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-chip[data-status="ready"] {
+  border-color: var(--accent);
+  color: #d6e2d0;
+  background: var(--accent-deep);
+}
+
+.status-chip[data-status="failed"] {
+  border-color: var(--danger);
+  color: #dfb1a7;
+  background: #2c211f;
+}
+
+.status-chip[data-status="pending"],
+.status-chip[data-status="generating"] {
+  color: #d8c99e;
+  background: #29271d;
+}
+
+.enrichment-actions {
+  display: flex;
+  margin-top: 16px;
+  gap: 8px;
+}
+
+.enrichment-actions .primary-action,
+.enrichment-actions .quiet-action {
+  padding-inline: 16px;
+}
+
+.image-comparison {
+  display: grid;
+  margin-top: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.image-card {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #111411;
+}
+
+.image-card > div:first-child {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--line);
+}
+
+.image-card > div:first-child span {
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.image-card > div:first-child code {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.image-card > img,
+.image-placeholder {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.image-card > img {
+  object-fit: contain;
+  background-color: #eeeae0;
+  background-image:
+    linear-gradient(45deg, rgba(35, 40, 35, 0.06) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(35, 40, 35, 0.06) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(35, 40, 35, 0.06) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(35, 40, 35, 0.06) 75%);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+}
+
+.image-placeholder {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 24px;
+  color: var(--muted);
+  background: #171a17;
+  text-align: center;
+}
+
+.image-placeholder > span {
+  color: var(--accent);
+  font-family: "SFMono-Regular", "Cascadia Code", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.image-placeholder > p {
+  max-width: 28ch;
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.image-placeholder[data-state="pending"],
+.image-placeholder[data-state="generating"] {
+  background: linear-gradient(120deg, #171a17 20%, #232921 50%, #171a17 80%);
+  background-size: 220% 100%;
+  animation: enrichment-pulse 2s ease-in-out infinite;
+}
+
+.enrichment-error {
+  margin-top: 10px;
+}
+
 .viewer-meta {
   display: flex;
   align-items: end;
@@ -577,6 +730,12 @@ dd,
   }
 }
 
+@keyframes enrichment-pulse {
+  50% {
+    background-position: 100% 0;
+  }
+}
+
 @media (max-width: 900px) {
   .lab-header {
     padding-inline: 16px;
@@ -603,12 +762,34 @@ dd,
     min-height: 54dvh;
     padding: 28px;
   }
+
+  .enrichment-panel {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 620px) {
+  .enrichment-heading,
+  .enrichment-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .status-chip {
+    align-self: start;
+  }
+
+  .image-comparison {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .deployment-state > span,
   .fixture-skeleton span,
-  .viewer-loading span {
+  .viewer-loading span,
+  .image-placeholder[data-state="pending"],
+  .image-placeholder[data-state="generating"] {
     animation: none;
   }
 }
