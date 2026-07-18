@@ -2,12 +2,22 @@
 
 import type { SaleView, YardItem } from "@yard/contracts";
 import Link from "next/link";
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Logo } from "@/src/components/logo";
 import { QrCode } from "@/src/components/qr-code";
 import { SceneView } from "@/src/components/scene-view";
+import {
+  getCapturePreview,
+  releaseCapturePreview,
+} from "@/src/features/capture/preview-memory";
+import { AnalysisStatus } from "@/src/features/scan/analysis-status";
 import { ItemReview } from "@/src/features/item-review/item-review";
+import {
+  applyListingDrafts,
+  rememberListingDraft,
+  type ListingDrafts,
+} from "@/src/features/item-review/listing-drafts";
 import {
   createPhotoStates,
   moveReviewIndex,
@@ -21,6 +31,17 @@ import { getYardService } from "@/src/services/yard-service";
 
 type Phase = "scanning" | "detect" | "confirm" | "publish";
 
+const openingSale = {
+  status: "draft",
+  processingStage: "uploaded",
+  progress: 0,
+  items: [],
+  error: null,
+} satisfies Pick<
+  SaleView,
+  "status" | "processingStage" | "progress" | "items" | "error"
+>;
+
 export default function ScanPage({ params }: { params: Promise<{ saleId: string }> }) {
   const { saleId } = use(params);
   const service = getYardService();
@@ -32,6 +53,9 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
   const [activeReviewIndex, setActiveReviewIndex] = useState(0);
   const [photoStates, setPhotoStates] = useState<ItemPhotoStates>({});
   const [shareOrigin, setShareOrigin] = useState("https://yard.sh");
+  const [retryingAnalysis, setRetryingAnalysis] = useState(false);
+  const [capturePreview] = useState(() => getCapturePreview(saleId));
+  const listingDraftsRef = useRef<ListingDrafts>({});
 
   useEffect(() => setShareOrigin(window.location.origin), []);
 
@@ -42,8 +66,7 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
       try {
         const loaded = await service.getSale(saleId);
         if (cancelled) return;
-        setSale(loaded);
-        setVisibleBoxes(loaded.items.length);
+        setSale(applyListingDrafts(loaded, listingDraftsRef.current));
         if (loaded.status === "published") {
           setPhase("publish");
         } else if (loaded.processingStage === "complete") {
@@ -63,6 +86,25 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
       if (timeout) clearTimeout(timeout);
     };
   }, [saleId, service]);
+
+  useEffect(() => {
+    if (!sale?.image) return;
+    releaseCapturePreview(saleId);
+  }, [sale?.image, saleId]);
+
+  useEffect(() => {
+    if (phase !== "scanning" || !sale) return;
+    if (visibleBoxes > sale.items.length) {
+      setVisibleBoxes(sale.items.length);
+      return;
+    }
+    if (visibleBoxes >= sale.items.length) return;
+    const timer = setTimeout(
+      () => setVisibleBoxes((current) => Math.min(current + 1, sale.items.length)),
+      110,
+    );
+    return () => clearTimeout(timer);
+  }, [phase, sale, visibleBoxes]);
 
   useEffect(() => {
     if (!toast) return;
@@ -99,6 +141,11 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
     itemId: string,
     patch: Partial<Pick<YardItem, "title" | "condition" | "finalPricePhp">>,
   ) {
+    listingDraftsRef.current = rememberListingDraft(
+      listingDraftsRef.current,
+      itemId,
+      patch,
+    );
     setSale((current) =>
       current
         ? {
@@ -109,7 +156,11 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
           }
         : current,
     );
-    await service.updateItem(itemId, patch);
+    try {
+      await service.updateItem(itemId, patch);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Could not save that edit.");
+    }
   }
 
   async function removeItem(itemId: string) {
@@ -162,11 +213,35 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
     setPhase("publish");
   }
 
+  async function retryAnalysis() {
+    setRetryingAnalysis(true);
+    setVisibleBoxes(0);
+    try {
+      await service.startScan(saleId);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Could not restart analysis.");
+    } finally {
+      setRetryingAnalysis(false);
+    }
+  }
+
   if (!sale) {
     return (
       <main className="screen">
-        <div className="content" style={{ justifyContent: "center", alignItems: "center" }}>
-          <span className="muted">Loading…</span>
+        <div className="topbar analysis-topbar">
+          <span className="screen-title">Analyzing photo</span>
+          <span className="chip pill-soft">Starting</span>
+        </div>
+        <div className="analysis-content">
+          <div className={`analysis-handoff-preview${capturePreview ? "" : " ph"}`}>
+            {capturePreview ? (
+              <img src={capturePreview} alt="Your captured scene" />
+            ) : (
+              <span>YOUR PHOTO</span>
+            )}
+            <span className="analysis-preview-label">Your photo · opening</span>
+          </div>
+          <AnalysisStatus sale={openingSale} retrying={false} onRetry={() => undefined} />
         </div>
       </main>
     );
@@ -182,21 +257,25 @@ export default function ScanPage({ params }: { params: Promise<{ saleId: string 
     <main className="screen">
       {phase === "scanning" && (
         <>
-          <div className="topbar">
-            <span className="screen-title">Scanning…</span>
-            <span className="label">Yard vision</span>
+          <div className="topbar analysis-topbar">
+            <span className="screen-title">Analyzing photo</span>
+            <span className="chip pill-soft">
+              {sale.items.length > 0 ? `${sale.items.length} found` : "Live"}
+            </span>
           </div>
-          <div className="content">
+          <div className="analysis-content">
             <SceneView
               items={sale.items}
               image={sale.image}
               visibleCount={visibleBoxes}
               scanning
-              caption="SCENE.JPG · analyzing"
+              caption="YOUR PHOTO · live analysis"
             />
-            <p className="muted" style={{ textAlign: "center" }}>
-              {sale.error?.message ?? `Finding sellable items… ${Math.round(sale.progress)}%`}
-            </p>
+            <AnalysisStatus
+              sale={sale}
+              retrying={retryingAnalysis}
+              onRetry={() => void retryAnalysis()}
+            />
           </div>
         </>
       )}
