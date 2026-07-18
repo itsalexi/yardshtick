@@ -329,6 +329,245 @@ button {
   color: var(--accent);
 }
 
+/* ---------- one-at-a-time item review ---------- */
+
+.item-review-topbar .screen-title {
+  font-size: 19px;
+}
+
+.review-back {
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.item-review-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.generated-photo-card,
+.review-fields {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+
+.generated-photo-card {
+  overflow: hidden;
+}
+
+.generated-photo-stage {
+  position: relative;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  background: oklch(0.945 0.018 225);
+}
+
+.generated-photo {
+  object-fit: cover;
+  animation: photo-reveal 0.42s ease both;
+}
+
+.generation-badge {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(20, 20, 22, 0.76);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(10px);
+}
+
+.photo-skeleton {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(255, 255, 255, 0.9) 0 3px, transparent 4px),
+    radial-gradient(circle at 84% 26%, rgba(255, 255, 255, 0.7) 0 2px, transparent 3px),
+    linear-gradient(135deg, oklch(0.95 0.02 225), oklch(0.89 0.025 225));
+}
+
+.photo-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    100deg,
+    transparent 24%,
+    rgba(255, 255, 255, 0.7) 46%,
+    transparent 68%
+  );
+  animation: skeleton-sweep 1.15s ease-in-out infinite;
+}
+
+.skeleton-product {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: 44%;
+  height: 54%;
+  transform: translate(-50%, -50%);
+  border-radius: 34% 24% 30% 22%;
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: inset -18px -18px 32px rgba(126, 143, 151, 0.08);
+}
+
+.skeleton-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 17%;
+  width: 48%;
+  height: 8%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(91, 105, 114, 0.12);
+  filter: blur(9px);
+}
+
+.skeleton-spark {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  transform: rotate(45deg);
+}
+
+.spark-one {
+  right: 19%;
+  top: 28%;
+}
+
+.spark-two {
+  left: 20%;
+  top: 42%;
+  width: 8px;
+  height: 8px;
+}
+
+.photo-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+}
+
+.photo-actions .btn-small {
+  width: 100%;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.review-fields {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.review-title-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.review-title-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.review-title-field input {
+  font-family: var(--font-display), sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.remove-item {
+  flex: 0 0 44px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.review-field-label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.review-pricing {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.review-price-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-price-heading > span:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.review-price-heading .muted {
+  font-size: 12px;
+}
+
+.review-price-heading .price {
+  flex-shrink: 0;
+  font-size: 25px;
+}
+
+.review-footer .review-previous {
+  flex: 0.68;
+}
+
+.review-footer .btn:not(.review-previous) {
+  flex: 1;
+}
+
+@keyframes skeleton-sweep {
+  to { transform: translateX(100%); }
+}
+
+@keyframes photo-reveal {
+  from { opacity: 0; transform: scale(1.025); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-skeleton::after,
+  .generated-photo {
+    animation: none;
+  }
+}
+
 /* ---------- scene + boxes ---------- */
 
 .scene {
@@ -361,26 +600,29 @@ button {
   background: oklch(0.63 0.1 45 / 0.4);
 }
 
-.box .box-label {
+.box .box-marker {
   position: absolute;
-  top: -10px;
-  left: 6px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 2px solid var(--ink);
   color: var(--ink);
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 7px;
-  white-space: nowrap;
-  max-width: 130px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-family: var(--font-display), sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(20, 20, 22, 0.22);
 }
 
-.box[data-tag="true"] .box-label {
+.box[data-tag="true"] .box-marker {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: #fff;
   color: #fff;
 }
 

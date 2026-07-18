@@ -60,7 +60,9 @@ export function SceneView({ items, visibleCount, scanning, caption, onTapItem }:
           aria-pressed={item.selected}
           aria-label={item.title}
         >
-          <span className="box-label">{item.title}</span>
+          <span className="box-marker" aria-hidden="true">
+            !
+          </span>
         </button>
       ))}
     </div>
