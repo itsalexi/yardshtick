@@ -1,0 +1,29 @@
+{
+  "name": "@yard/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yard/contracts": "workspace:*",
+    "@yard/mock-data": "workspace:*",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@yard/eslint-config": "workspace:*",
+    "@yard/typescript-config": "workspace:*",
+    "eslint": "10.7.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

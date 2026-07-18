@@ -1,0 +1,12 @@
+node_modules/
+.turbo/
+.next/
+dist/
+coverage/
+.env
+.env.local
+.env.*.local
+.convex/
+apps/backend/convex/_generated/
+.DS_Store
+*.tsbuildinfo
