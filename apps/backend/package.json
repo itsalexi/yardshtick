@@ -17,6 +17,7 @@
   "devDependencies": {
     "@yard/eslint-config": "workspace:*",
     "@yard/typescript-config": "workspace:*",
+    "convex-test": "0.0.54",
     "eslint": "10.7.0",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
