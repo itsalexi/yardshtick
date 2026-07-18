@@ -14,7 +14,8 @@ This design supplements the approved Yard technical specification. It does not c
 ```text
 yardshtick/
 ├── apps/
-│   ├── web/                 # Next.js frontend
+│   ├── web/                 # Next.js product frontend
+│   ├── lab/                 # Disposable Vite UI for live backend testing
 │   └── backend/             # Convex schema, functions, and actions
 ├── packages/
 │   ├── contracts/           # Zod schemas and inferred TypeScript types
@@ -32,20 +33,21 @@ The repository uses pnpm workspaces for package management and Turborepo for tas
 
 ## Ownership and Dependency Rules
 
-The frontend team owns `apps/web`. The AI/backend team owns `apps/backend` and `packages/ai`. Both teams jointly own `packages/contracts`. Mock fixtures belong in `packages/mock-data` rather than being embedded throughout frontend components.
+The frontend team owns `apps/web`. The AI/backend team owns `apps/backend`, `apps/lab`, and `packages/ai`. Both teams jointly own `packages/contracts`. Mock fixtures belong in `packages/mock-data` rather than being embedded throughout frontend components.
 
 Allowed dependency direction:
 
 ```text
 apps/web       ──────> packages/contracts
 apps/web       ──────> packages/mock-data
+apps/lab       ──────> packages/contracts
 apps/backend   ───> packages/contracts
 apps/backend   ───> packages/ai
 packages/ai    ───> packages/contracts
 packages/mock-data -> packages/contracts
 ```
 
-`apps/web` must not import from `apps/backend` or `packages/ai`. `packages/contracts` must not depend on any app, Convex-generated code, browser API, or provider SDK.
+`apps/web` and `apps/lab` must not import from `apps/backend` or `packages/ai`. The lab uses named Convex function references and shared contracts instead of importing generated backend code. `packages/contracts` must not depend on any app, Convex-generated code, browser API, or provider SDK.
 
 ## Application Responsibilities
 
@@ -63,6 +65,12 @@ uploaded -> discovering -> boxes available -> segmenting
 ```
 
 Mock delays should be short and configurable so developers can inspect progressive UI behavior without slowing routine work.
+
+### Backend lab application
+
+`apps/lab` is a small Vite and React application for AI/backend development before the product frontend connects to Convex. It uploads fixture or custom scenes, starts real scans, subscribes to reactive progress, renders boxes and polygons, generates revisioned browser crops, and compares real crops with GPT Image 2 outputs.
+
+The lab is internal tooling rather than a second product frontend. It has no product styling, routing system, authentication, or marketplace flows. It may be removed after final frontend integration.
 
 ### Backend application
 
@@ -176,7 +184,7 @@ The monorepo foundation is complete when:
 
 - pnpm installs every workspace from the repository root.
 - Turborepo can run development, build, lint, type-check, and test tasks where those tasks exist.
-- The web and backend apps start independently.
+- The web, lab, and backend apps start independently.
 - Package imports follow the documented dependency direction.
 - The frontend can complete the rehearsed flow using validated mock fixtures.
 - Shared contracts can be consumed by both apps.
@@ -186,7 +194,7 @@ The monorepo foundation is complete when:
 ## Explicitly Out of Scope
 
 - A standalone AI microservice
-- Multiple frontend applications
+- Multiple product frontend applications beyond `apps/web`
 - Shared component libraries before duplication exists
 - Storybook or a dedicated design-system site
 - Container orchestration
@@ -194,4 +202,3 @@ The monorepo foundation is complete when:
 - Production authentication and authorization
 - Production observability and data lifecycle automation
 - Generalizing the packages for use outside Yard
-

@@ -5,7 +5,7 @@
 
 ## Objective
 
-Build Yard's AI pipeline and Convex product backend as independently testable vertical slices. The first slice takes a canonical scene image through live product discovery and segmentation, persists progressive results, and exposes a reactive seller view. The next enrichment slice accepts real item crops and uses GPT Image 2 to produce polished marketplace photos without blocking the core flow.
+Build Yard's AI pipeline and Convex product backend as independently testable vertical slices. The first slice takes a canonical scene image through live product discovery and segmentation, persists progressive results, and exposes a reactive seller view plus a standalone backend lab. The next enrichment slice accepts real item crops and uses GPT Image 2 to produce polished marketplace photos without blocking the core flow.
 
 This design implements the backend portions of `docs/Yard-Technical-Spec-Roboflow-SAM2-v2.md` while retaining the monorepo boundaries in `docs/superpowers/specs/2026-07-18-monorepo-architecture-design.md`.
 
@@ -23,6 +23,7 @@ This design implements the backend portions of `docs/Yard-Technical-Spec-Roboflo
 - Validate polygons and create box fallbacks for failed predictions.
 - Persist masks, run metrics, and progressive sale state.
 - Expose a reactive seller-view query.
+- Provide a standalone backend lab UI for running and visually inspecting the live pipeline.
 
 ### Slice 2: Item crop attachment and marketplace images
 
@@ -116,6 +117,26 @@ Owns Convex-specific persistence and orchestration:
 - Sample dataset seeding entry points
 
 External provider calls run in Node Convex actions. Queries and mutations never call providers. Actions access tables only through public or internal Convex functions.
+
+### `apps/lab`
+
+Owns a disposable Vite and React interface for backend development:
+
+- Picker for fixture sales already uploaded by the dataset seed command
+- Custom JPEG, PNG, or WebP upload
+- Convex sale creation and scan controls
+- Reactive stage, progress, latency, and error display
+- Canonical-image SVG overlay for boxes and polygons
+- Candidate selection and item diagnostics
+- Browser canvas crop generation and revision-safe upload
+- Real-crop and GPT Image 2 result comparison
+- Retry and reset controls
+
+The lab connects directly to the configured development deployment using `VITE_CONVEX_URL`. It consumes `packages/contracts` and uses named Convex function references rather than importing `apps/backend` or its generated API files. It contains no provider keys and does not call OpenAI or Roboflow directly.
+
+The fixture picker reads seeded scenes through `samples.list`. The existing dataset seed command remains responsible for reading fixture files from disk and uploading them; the browser does not duplicate or bundle the dataset images.
+
+The lab is not the product frontend. It intentionally omits product styling, accounts, storefronts, reservations, and reusable UI abstractions, and may be deleted after final integration.
 
 ### `packages/contracts`
 
@@ -374,7 +395,9 @@ Indexes:
 ### Public functions
 
 - `files.generateUploadUrl()`
+- `sales.createDraft({ storageId, metadata })`
 - `samples.createSale({ fixtureKey, storageId, metadata })`
+- `samples.list()`
 - `scan.start({ saleId })`
 - `sales.getSellerView({ saleId })`
 - `files.generateCropUploadUrl({ itemId })`
@@ -425,6 +448,18 @@ Persist provider response IDs and safe metrics. Never persist or log API keys, p
 
 ## Testing
 
+### Backend lab verification
+
+The lab receives focused component tests for:
+
+- Mapping a reactive seller view into SVG boxes and polygons
+- Display-to-canonical coordinate scaling
+- Crop generation from a polygon or box fallback
+- Stale crop revision handling
+- Failed and zero-candidate scan states
+
+One Playwright smoke test runs against mocked Convex responses and verifies upload, progressive boxes, polygon display, crop attachment, and marketplace-image comparison. Paid providers remain opt-in.
+
 ### Routine tests
 
 Routine tests never call paid providers.
@@ -467,16 +502,19 @@ Generated marketplace images receive a manual identity-preservation review acros
 
 1. Dataset fixtures, manifest validation, and idempotent Convex seeding
 2. Shared contract expansion and full Convex schema
-3. GPT-5.6 Sol discovery provider with recorded and live smoke tests
-4. Roboflow embedding and segmentation provider with mask fallback tests
-5. Convex orchestration and reactive seller view
-6. Revision-safe crop attachment contract
-7. GPT Image 2 marketplace-image enrichment
-8. Full six-scene live evaluation report
+3. Backend lab shell, deployment connection, and fixture upload
+4. GPT-5.6 Sol discovery provider with recorded and live smoke tests
+5. Roboflow embedding and segmentation provider with mask fallback tests
+6. Convex orchestration, reactive seller view, and lab overlays
+7. Revision-safe crop attachment and lab crop generation
+8. GPT Image 2 marketplace-image enrichment and lab comparison
+9. Full six-scene live evaluation report
 
 ## Acceptance Criteria
 
 - All six scenes seed idempotently into the Convex development deployment.
+- The standalone lab starts without `apps/web` and can upload a fixture or custom image.
+- The lab renders reactive processing stages, candidate boxes, polygons, box fallbacks, and safe errors.
 - `laptop-table-multi` produces useful multi-object candidates.
 - `phone-single`, `charger-cable`, `overlapping-caps`, and `pa-speaker-room` identify their required products.
 - `empty-table-room` returns no accepted products.
@@ -486,6 +524,7 @@ Generated marketplace images receive a manual identity-preservation review acros
 - Routine tests demonstrate full and partial provider failures without paid requests.
 - At least one real crop produces a stored GPT Image 2 marketplace photo.
 - GPT Image 2 failure demonstrably preserves the real crop.
+- The lab can attach a revisioned crop and compare it with the generated marketplace image.
 - Linting, type checking, unit tests, Convex tests, and builds pass across the monorepo.
 
 ## Current Provider References
